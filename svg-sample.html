@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVG Coordinate System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg1: #e8ecef;
+      --bg2: #f7f2ea;
+      --ink: #152025;
+      --line: #90a4ae;
+      --grid: #dce4e8;
+      --x: #0f8d67;
+      --y: #bf5a45;
+      --point: #2a66b4;
+      --f1: #b6543f;
+      --f2: #3566b8;
+      --f3: #7a8f3b;
+      --panel: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(160deg, var(--bg1), var(--bg2));
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+
+    .wrap {
+      width: min(860px, 100%);
+      background: var(--panel);
+      border: 1px solid #d1d9de;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 34px rgba(21, 32, 37, 0.12);
+      animation: lift 420ms ease-out;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.2rem, 3vw, 1.6rem);
+    }
+
+    p {
+      margin: 0 0 14px;
+      font-family: "IBM Plex Mono", monospace;
+      color: #5f6f78;
+      font-size: 0.9rem;
+    }
+
+    .controls,
+    .layers,
+    .legend {
+      border: 1px solid #dce4e8;
+      border-radius: 10px;
+      background: #f8fcff;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.82rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin: 0 0 12px;
+      padding: 10px 12px;
+    }
+
+    .controls label,
+    .layer-row label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .controls input[type="range"] {
+      width: 180px;
+    }
+
+    .controls button {
+      border: 1px solid #c8d5dc;
+      background: #ffffff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font: inherit;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .controls .meta {
+      color: #5f6f78;
+      white-space: nowrap;
+    }
+
+    .layers {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .layer-row {
+      display: grid;
+      grid-template-columns: 14px 24px minmax(0, 1fr) minmax(0, 190px);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .layer-row input[type="text"] {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid #c8d5dc;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font: inherit;
+      color: var(--ink);
+      background: #ffffff;
+    }
+
+    .layer-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--swatch, var(--point));
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    }
+
+    .layer-status {
+      color: #91573d;
+      min-height: 1em;
+    }
+
+    .board {
+      position: relative;
+      border: 1px solid #d9e1e6;
+      border-radius: 10px;
+      background: #fbfdff;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .board.is-panning {
+      cursor: grabbing;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .tooltip {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform: translate(12px, -18px);
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(27, 37, 41, 0.92);
+      color: #f7fafb;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.75rem;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      margin-top: 12px;
+      padding: 10px 12px;
+      color: #5f6f78;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .caption {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      font-family: "IBM Plex Mono", monospace;
+      color: #61727b;
+    }
+
+    @keyframes lift {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .layer-row {
+        grid-template-columns: 14px 24px minmax(0, 1fr);
+      }
+
+      .layer-status {
+        grid-column: 3;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <h1>SVG Coordinate System with Arrowheads</h1>
+    <p>Interactive SVG with multiple function layers, point hover tooltips, and bounded panning inside a world range of -30 to 30.</p>
+
+    <div class="controls" role="group" aria-label="Chart controls">
+      <label><input id="showGrid" type="checkbox" checked />Show grid</label>
+      <label><input id="snapPoints" type="checkbox" checked />Snap points</label>
+      <label><input id="lockPanX" type="checkbox" />Lock X pan</label>
+      <label><input id="lockPanY" type="checkbox" />Lock Y pan</label>
+      <label for="zoom">Zoom</label>
+      <input id="zoom" type="range" min="0.6" max="1.8" step="0.1" value="1" />
+      <span id="zoomValue">1.0x</span>
+      <span id="viewRange" class="meta"></span>
+      <button id="resetView" type="button">Reset view</button>
+      <button id="exportSvg" type="button">Export SVG</button>
+    </div>
+
+    <div class="layers" aria-label="Function layers">
+      <div class="layer-row">
+        <span class="swatch" style="--swatch: var(--f1)"></span>
+        <input id="toggle0" type="checkbox" data-layer-visible-index="0" checked aria-label="Toggle f1" />
+        <label for="function0">f1(x)
+          <input id="function0" type="text" value="sin(x) * 4" data-layer-index="0" spellcheck="false" />
+        </label>
+        <span id="function0Status" class="layer-status" data-layer-status="0" aria-live="polite"></span>
+      </div>
+      <div class="layer-row">
+        <span class="swatch" style="--swatch: var(--f2)"></span>
+        <input id="toggle1" type="checkbox" data-layer-visible-index="1" checked aria-label="Toggle f2" />
+        <label for="function1">f2(x)
+          <input id="function1" type="text" value="x * x / 8 - 3" data-layer-index="1" spellcheck="false" />
+        </label>
+        <span id="function1Status" class="layer-status" data-layer-status="1" aria-live="polite"></span>
+      </div>
+      <div class="layer-row">
+        <span class="swatch" style="--swatch: var(--f3)"></span>
+        <input id="toggle2" type="checkbox" data-layer-visible-index="2" checked aria-label="Toggle f3" />
+        <label for="function2">f3(x)
+          <input id="function2" type="text" value="cos(x) * 2 + 1" data-layer-index="2" spellcheck="false" />
+        </label>
+        <span id="function2Status" class="layer-status" data-layer-status="2" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="board" id="board">
+      <svg id="chartSvg" viewBox="0 0 520 520" aria-label="Coordinate system drawn with SVG">
+        <defs>
+          <marker id="axisArrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="currentColor" />
+          </marker>
+        </defs>
+
+        <g id="gridLayer" stroke="var(--grid)" stroke-width="1"></g>
+        <g id="axisLayer"></g>
+        <g id="tickLayer" stroke="var(--line)" stroke-width="1.4"></g>
+        <g id="labelLayer" fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="12"></g>
+        <g id="functionLayer"></g>
+        <g id="pointLayer"></g>
+      </svg>
+      <div id="tooltip" class="tooltip" hidden></div>
+    </div>
+
+    <div class="legend" aria-label="Legend">
+      <span class="legend-item"><span class="swatch" style="--swatch: var(--point)"></span>Sample points</span>
+      <span class="legend-item"><span class="swatch" style="--swatch: var(--f1)"></span>f1</span>
+      <span class="legend-item"><span class="swatch" style="--swatch: var(--f2)"></span>f2</span>
+      <span class="legend-item"><span class="swatch" style="--swatch: var(--f3)"></span>f3</span>
+    </div>
+
+    <div class="caption">Tip: Drag to pan, use the wheel to zoom at the pointer, and hover a sample point to inspect its coordinates.</div>
+  </section>
+
+  <script>
+    const WORLD_LIMIT = 30;
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const board = document.getElementById("board");
+    const svg = document.getElementById("chartSvg");
+    const tooltip = document.getElementById("tooltip");
+    const showGridToggle = document.getElementById("showGrid");
+    const snapPointsToggle = document.getElementById("snapPoints");
+    const lockPanXToggle = document.getElementById("lockPanX");
+    const lockPanYToggle = document.getElementById("lockPanY");
+    const zoomInput = document.getElementById("zoom");
+    const zoomValue = document.getElementById("zoomValue");
+    const viewRange = document.getElementById("viewRange");
+    const resetViewButton = document.getElementById("resetView");
+    const exportSvgButton = document.getElementById("exportSvg");
+    const functionInputs = Array.from(document.querySelectorAll("[data-layer-index]"));
+    const layerToggles = Array.from(document.querySelectorAll("[data-layer-visible-index]"));
+    const functionStatuses = Array.from(document.querySelectorAll("[data-layer-status]"));
+
+    const gridLayer = document.getElementById("gridLayer");
+    const axisLayer = document.getElementById("axisLayer");
+    const tickLayer = document.getElementById("tickLayer");
+    const labelLayer = document.getElementById("labelLayer");
+    const functionLayer = document.getElementById("functionLayer");
+    const pointLayer = document.getElementById("pointLayer");
+
+    const frame = {
+      left: 56,
+      right: 492,
+      top: 28,
+      bottom: 464,
+      baseExtent: 10
+    };
+
+    const samplePoints = [
+      { x: -8, y: -6, label: "A" },
+      { x: -4, y: 2, label: "B" },
+      { x: -1, y: -1, label: "C" },
+      { x: 3, y: 5, label: "D" },
+      { x: 7, y: 3, label: "E" }
+    ];
+
+    const state = {
+      showGrid: true,
+      snapPoints: true,
+      lockPanX: false,
+      lockPanY: false,
+      zoom: 1,
+      offsetX: 0,
+      offsetY: 0,
+      functionLayers: [
+        { color: "#b6543f", expression: "sin(x) * 4", compiled: null, visible: true },
+        { color: "#3566b8", expression: "x * x / 8 - 3", compiled: null, visible: true },
+        { color: "#7a8f3b", expression: "cos(x) * 2 + 1", compiled: null, visible: true }
+      ],
+      isPanning: false,
+      dragPointIndex: null,
+      pointerId: null,
+      lastPointerX: 0,
+      lastPointerY: 0
+    };
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function getExtent() {
+      return frame.baseExtent / state.zoom;
+    }
+
+    function clampOffsets() {
+      const extent = getExtent();
+      const limit = Math.max(0, WORLD_LIMIT - extent);
+      state.offsetX = clamp(state.offsetX, -limit, limit);
+      state.offsetY = clamp(state.offsetY, -limit, limit);
+    }
+
+    function compileLayer(index, expression) {
+      try {
+        const candidate = new Function(
+          "x",
+          "const { abs, acos, asin, atan, ceil, cos, exp, floor, log, max, min, PI, pow, round, sign, sin, sqrt, tan } = Math; return (" + expression + ");"
+        );
+        const probe = candidate(0.5);
+        if (!Number.isFinite(probe)) {
+          throw new Error("Must return a finite number.");
+        }
+        state.functionLayers[index].expression = expression;
+        state.functionLayers[index].compiled = candidate;
+        functionStatuses[index].textContent = "";
+      } catch (error) {
+        state.functionLayers[index].compiled = null;
+        functionStatuses[index].textContent = error.message;
+      }
+    }
+
+    function getView() {
+      const extent = getExtent();
+      return {
+        xMin: state.offsetX - extent,
+        xMax: state.offsetX + extent,
+        yMin: state.offsetY - extent,
+        yMax: state.offsetY + extent
+      };
+    }
+
+    function mapX(x, view) {
+      const width = frame.right - frame.left;
+      return frame.left + ((x - view.xMin) / (view.xMax - view.xMin)) * width;
+    }
+
+    function mapY(y, view) {
+      const height = frame.bottom - frame.top;
+      return frame.bottom - ((y - view.yMin) / (view.yMax - view.yMin)) * height;
+    }
+
+    function unmapX(pixelX, view) {
+      const width = frame.right - frame.left;
+      return view.xMin + ((pixelX - frame.left) / width) * (view.xMax - view.xMin);
+    }
+
+    function unmapY(pixelY, view) {
+      const height = frame.bottom - frame.top;
+      return view.yMin + ((frame.bottom - pixelY) / height) * (view.yMax - view.yMin);
+    }
+
+    function getPointerPosition(event) {
+      const rect = svg.getBoundingClientRect();
+      const scaleX = 520 / rect.width;
+      const scaleY = 520 / rect.height;
+      return {
+        svgX: (event.clientX - rect.left) * scaleX,
+        svgY: (event.clientY - rect.top) * scaleY,
+        cssX: event.clientX - rect.left,
+        cssY: event.clientY - rect.top
+      };
+    }
+
+    function clearLayer(layer) {
+      while (layer.firstChild) {
+        layer.removeChild(layer.firstChild);
+      }
+    }
+
+    function createLine(x1, y1, x2, y2, stroke, width, withArrow) {
+      const element = document.createElementNS(SVG_NS, "line");
+      element.setAttribute("x1", x1);
+      element.setAttribute("y1", y1);
+      element.setAttribute("x2", x2);
+      element.setAttribute("y2", y2);
+      element.setAttribute("stroke", stroke);
+      element.setAttribute("stroke-width", width);
+      if (withArrow) {
+        element.setAttribute("marker-end", "url(#axisArrow)");
+      }
+      return element;
+    }
+
+    function createText(x, y, value, color) {
+      const element = document.createElementNS(SVG_NS, "text");
+      element.setAttribute("x", x);
+      element.setAttribute("y", y);
+      element.setAttribute("fill", color || "var(--ink)");
+      element.textContent = value;
+      return element;
+    }
+
+    function chooseStep(extent) {
+      const target = extent / 5;
+      const options = [0.5, 1, 2, 5];
+      for (const option of options) {
+        if (option >= target) {
+          return option;
+        }
+      }
+      return 10;
+    }
+
+    function snapValue(value, view) {
+      if (!state.snapPoints) {
+        return value;
+      }
+      const step = chooseStep(Math.max(Math.abs(view.xMin), Math.abs(view.xMax)));
+      return Math.round(value / step) * step;
+    }
+
+    function drawGrid(view) {
+      clearLayer(gridLayer);
+      if (!state.showGrid) {
+        return;
+      }
+      const step = chooseStep(Math.max(Math.abs(view.xMin), Math.abs(view.xMax)));
+      for (let x = Math.ceil(view.xMin / step) * step; x <= view.xMax; x += step) {
+        const px = mapX(x, view);
+        gridLayer.appendChild(createLine(px, frame.top, px, frame.bottom, "var(--grid)", 1, false));
+      }
+      for (let y = Math.ceil(view.yMin / step) * step; y <= view.yMax; y += step) {
+        const py = mapY(y, view);
+        gridLayer.appendChild(createLine(frame.left, py, frame.right, py, "var(--grid)", 1, false));
+      }
+    }
+
+    function drawAxes(view) {
+      clearLayer(axisLayer);
+      const zeroX = mapX(0, view);
+      const zeroY = mapY(0, view);
+      axisLayer.appendChild(createLine(frame.left, zeroY, frame.right, zeroY, "var(--x)", 2.7, true));
+      axisLayer.appendChild(createLine(zeroX, frame.bottom, zeroX, frame.top, "var(--y)", 2.7, true));
+    }
+
+    function drawTicksAndLabels(view) {
+      clearLayer(tickLayer);
+      clearLayer(labelLayer);
+      const step = chooseStep(Math.max(Math.abs(view.xMin), Math.abs(view.xMax)));
+      const zeroX = mapX(0, view);
+      const zeroY = mapY(0, view);
+
+      for (let x = Math.ceil(view.xMin / step) * step; x <= view.xMax; x += step) {
+        if (Math.abs(x) < 0.0001) {
+          continue;
+        }
+        const px = mapX(x, view);
+        tickLayer.appendChild(createLine(px, zeroY - 4, px, zeroY + 4, "var(--line)", 1.4, false));
+        labelLayer.appendChild(createText(px - 9, zeroY + 18, String(Number(x.toFixed(2)))));
+      }
+
+      for (let y = Math.ceil(view.yMin / step) * step; y <= view.yMax; y += step) {
+        if (Math.abs(y) < 0.0001) {
+          continue;
+        }
+        const py = mapY(y, view);
+        tickLayer.appendChild(createLine(zeroX - 4, py, zeroX + 4, py, "var(--line)", 1.4, false));
+        labelLayer.appendChild(createText(zeroX - 34, py + 4, String(Number(y.toFixed(2)))));
+      }
+
+      labelLayer.appendChild(createText(frame.right + 6, zeroY + 4, "X"));
+      labelLayer.appendChild(createText(zeroX - 4, frame.top - 8, "Y"));
+      labelLayer.appendChild(createText(zeroX + 8, zeroY + 16, "(0,0)"));
+    }
+
+    function drawFunctionLayers(view) {
+      clearLayer(functionLayer);
+      for (const layer of state.functionLayers) {
+        if (!layer.compiled || !layer.visible) {
+          continue;
+        }
+        const points = [];
+        for (let pixelX = frame.left; pixelX <= frame.right; pixelX += 2) {
+          const x = unmapX(pixelX, view);
+          const y = layer.compiled(x);
+          if (!Number.isFinite(y)) {
+            continue;
+          }
+          const pixelY = mapY(y, view);
+          if (!Number.isFinite(pixelY)) {
+            continue;
+          }
+          points.push(pixelX.toFixed(2) + "," + pixelY.toFixed(2));
+        }
+        if (points.length === 0) {
+          continue;
+        }
+        const polyline = document.createElementNS(SVG_NS, "polyline");
+        polyline.setAttribute("points", points.join(" "));
+        polyline.setAttribute("fill", "none");
+        polyline.setAttribute("stroke", layer.color);
+        polyline.setAttribute("stroke-width", "2.2");
+        functionLayer.appendChild(polyline);
+      }
+    }
+
+    function drawPoints(view) {
+      clearLayer(pointLayer);
+
+      const path = document.createElementNS(SVG_NS, "polyline");
+      path.setAttribute(
+        "points",
+        samplePoints.map((point) => mapX(point.x, view).toFixed(2) + "," + mapY(point.y, view).toFixed(2)).join(" ")
+      );
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "var(--point)");
+      path.setAttribute("stroke-width", "2");
+      pointLayer.appendChild(path);
+
+      samplePoints.forEach((point) => {
+        const px = mapX(point.x, view);
+        const py = mapY(point.y, view);
+        const circle = document.createElementNS(SVG_NS, "circle");
+        circle.setAttribute("cx", px);
+        circle.setAttribute("cy", py);
+        circle.setAttribute("r", 4.2);
+        circle.setAttribute("fill", "var(--point)");
+        pointLayer.appendChild(circle);
+        pointLayer.appendChild(createText(px + 7, py - 7, point.label, "var(--point)"));
+      });
+    }
+
+    function updateViewRange(view) {
+      viewRange.textContent =
+        "x:[" + view.xMin.toFixed(1) + ", " + view.xMax.toFixed(1) + "] y:[" + view.yMin.toFixed(1) + ", " + view.yMax.toFixed(1) + "]";
+    }
+
+    function updateZoomLabel() {
+      zoomValue.textContent = state.zoom.toFixed(1) + "x";
+    }
+
+    function render() {
+      const view = getView();
+      drawGrid(view);
+      drawAxes(view);
+      drawTicksAndLabels(view);
+      drawFunctionLayers(view);
+      drawPoints(view);
+      updateViewRange(view);
+    }
+
+    function showTooltip(text, x, y) {
+      tooltip.hidden = false;
+      tooltip.textContent = text;
+      tooltip.style.left = x + "px";
+      tooltip.style.top = y + "px";
+    }
+
+    function hideTooltip() {
+      tooltip.hidden = true;
+    }
+
+    function getHoveredPoint(pointer, view) {
+      for (const point of samplePoints) {
+        const px = mapX(point.x, view);
+        const py = mapY(point.y, view);
+        const dx = pointer.svgX - px;
+        const dy = pointer.svgY - py;
+        if (dx * dx + dy * dy <= 100) {
+          return point;
+        }
+      }
+      return null;
+    }
+
+    function updateTooltipFromPointer(event) {
+      if (state.isPanning) {
+        hideTooltip();
+        return;
+      }
+      const pointer = getPointerPosition(event);
+      const hovered = getHoveredPoint(pointer, getView());
+      if (!hovered) {
+        hideTooltip();
+        return;
+      }
+      showTooltip(hovered.label + " (" + hovered.x + ", " + hovered.y + ")", pointer.cssX, pointer.cssY);
+    }
+
+    function beginPan(event) {
+      if (event.button !== 0) {
+        return;
+      }
+
+      const pointer = getPointerPosition(event);
+      const hovered = getHoveredPoint(pointer, getView());
+
+      state.isPanning = true;
+      state.pointerId = event.pointerId;
+      state.lastPointerX = event.clientX;
+      state.lastPointerY = event.clientY;
+      state.dragPointIndex = hovered ? samplePoints.indexOf(hovered) : null;
+      board.classList.add("is-panning");
+      svg.setPointerCapture(event.pointerId);
+      hideTooltip();
+    }
+
+    function movePan(event) {
+      if (!state.isPanning || event.pointerId !== state.pointerId) {
+        updateTooltipFromPointer(event);
+        return;
+      }
+
+      const dx = event.clientX - state.lastPointerX;
+      const dy = event.clientY - state.lastPointerY;
+      state.lastPointerX = event.clientX;
+      state.lastPointerY = event.clientY;
+
+      if (state.dragPointIndex !== null) {
+        const pointer = getPointerPosition(event);
+        const view = getView();
+        const point = samplePoints[state.dragPointIndex];
+        point.x = clamp(snapValue(unmapX(pointer.svgX, view), view), -WORLD_LIMIT, WORLD_LIMIT);
+        point.y = clamp(snapValue(unmapY(pointer.svgY, view), view), -WORLD_LIMIT, WORLD_LIMIT);
+        render();
+        showTooltip(point.label + " (" + point.x.toFixed(2) + ", " + point.y.toFixed(2) + ")", pointer.cssX, pointer.cssY);
+        return;
+      }
+
+      const view = getView();
+      const unitsPerPixelX = (view.xMax - view.xMin) / (frame.right - frame.left);
+      const unitsPerPixelY = (view.yMax - view.yMin) / (frame.bottom - frame.top);
+
+      if (!state.lockPanX) {
+        state.offsetX -= dx * unitsPerPixelX;
+      }
+      if (!state.lockPanY) {
+        state.offsetY += dy * unitsPerPixelY;
+      }
+      clampOffsets();
+      render();
+    }
+
+    function endPan(event) {
+      if (event.pointerId !== state.pointerId) {
+        return;
+      }
+      state.isPanning = false;
+      state.dragPointIndex = null;
+      state.pointerId = null;
+      board.classList.remove("is-panning");
+      if (svg.hasPointerCapture(event.pointerId)) {
+        svg.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    function zoomAtPoint(nextZoom, pixelX, pixelY) {
+      const clampedZoom = clamp(nextZoom, Number(zoomInput.min), Number(zoomInput.max));
+      const previousView = getView();
+      const worldX = unmapX(pixelX, previousView);
+      const worldY = unmapY(pixelY, previousView);
+
+      state.zoom = clampedZoom;
+
+      const extent = getExtent();
+      const widthUnits = extent * 2;
+      const heightUnits = extent * 2;
+      const ratioX = (pixelX - frame.left) / (frame.right - frame.left);
+      const ratioY = (frame.bottom - pixelY) / (frame.bottom - frame.top);
+      const nextXMin = worldX - ratioX * widthUnits;
+      const nextYMin = worldY - ratioY * heightUnits;
+
+      state.offsetX = nextXMin + extent;
+      state.offsetY = nextYMin + extent;
+      clampOffsets();
+
+      zoomInput.value = String(clampedZoom);
+      updateZoomLabel();
+      render();
+    }
+
+    function handleWheel(event) {
+      event.preventDefault();
+      const pointer = getPointerPosition(event);
+      const direction = event.deltaY < 0 ? 1 : -1;
+      zoomAtPoint(state.zoom + direction * 0.1, pointer.svgX, pointer.svgY);
+    }
+
+    function resetView() {
+      state.zoom = 1;
+      state.offsetX = 0;
+      state.offsetY = 0;
+      zoomInput.value = "1";
+      updateZoomLabel();
+      render();
+      hideTooltip();
+    }
+
+    function exportSvg() {
+      const serializer = new XMLSerializer();
+      const source = serializer.serializeToString(svg);
+      const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "coordinate-system.svg";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    showGridToggle.addEventListener("change", () => {
+      state.showGrid = showGridToggle.checked;
+      render();
+    });
+
+    snapPointsToggle.addEventListener("change", () => {
+      state.snapPoints = snapPointsToggle.checked;
+    });
+
+    lockPanXToggle.addEventListener("change", () => {
+      state.lockPanX = lockPanXToggle.checked;
+    });
+
+    lockPanYToggle.addEventListener("change", () => {
+      state.lockPanY = lockPanYToggle.checked;
+    });
+
+    zoomInput.addEventListener("input", () => {
+      zoomAtPoint(Number(zoomInput.value), (frame.left + frame.right) / 2, (frame.top + frame.bottom) / 2);
+    });
+
+    functionInputs.forEach((input) => {
+      input.addEventListener("input", () => {
+        compileLayer(Number(input.dataset.layerIndex), input.value.trim());
+        render();
+      });
+    });
+
+    layerToggles.forEach((toggle) => {
+      toggle.addEventListener("change", () => {
+        const index = Number(toggle.dataset.layerVisibleIndex);
+        state.functionLayers[index].visible = toggle.checked;
+        render();
+      });
+    });
+
+    resetViewButton.addEventListener("click", resetView);
+    exportSvgButton.addEventListener("click", exportSvg);
+    svg.addEventListener("pointerdown", beginPan);
+    svg.addEventListener("pointermove", movePan);
+    svg.addEventListener("pointerup", endPan);
+    svg.addEventListener("pointercancel", endPan);
+    svg.addEventListener("pointerleave", hideTooltip);
+    svg.addEventListener("wheel", handleWheel, { passive: false });
+
+    state.functionLayers.forEach((layer, index) => {
+      compileLayer(index, layer.expression);
+    });
+    updateZoomLabel();
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coordinate System Samples</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-top: #f2efe6;
+      --bg-bottom: #d9e7e1;
+      --panel: #fffdf8;
+      --text: #1f2a2e;
+      --muted: #5f6d72;
+      --accent: #0b6e4f;
+      --accent-2: #b6543f;
+      --border: #c9d2cc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 15%, rgba(182, 84, 63, 0.14), transparent 36%),
+        radial-gradient(circle at 88% 10%, rgba(11, 110, 79, 0.16), transparent 40%),
+        linear-gradient(170deg, var(--bg-top), var(--bg-bottom));
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    main {
+      width: min(920px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: 0 14px 40px rgba(24, 40, 35, 0.12);
+      animation: reveal 500ms ease-out;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 14px 0 0;
+      font-family: "IBM Plex Mono", monospace;
+      color: var(--muted);
+    }
+
+    .cards {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 26px rgba(20, 45, 39, 0.12);
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+
+    .card .tag {
+      margin-top: 8px;
+      display: inline-block;
+      font-size: 0.8rem;
+      font-family: "IBM Plex Mono", monospace;
+      color: #fff;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 2px 10px;
+    }
+
+    .card:last-child .tag {
+      background: var(--accent-2);
+    }
+
+    .card p {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Coordinate System Samples</h1>
+    <p>Two implementation paths: SVG for sharp scalable vectors and Canvas for procedural drawing.</p>
+    <section class="cards">
+      <a class="card" href="svg-sample.html">
+        <h2>SVG Coordinate System</h2>
+        <span class="tag">Recommended</span>
+        <p>Uses a reusable marker arrowhead, a clean grid, and axis labels rendered as DOM-based vector elements.</p>
+      </a>
+      <a class="card" href="canvas-sample.html">
+        <h2>Canvas Coordinate System</h2>
+        <span class="tag">High Volume Data</span>
+        <p>Draws the same chart procedurally with JavaScript, including custom arrowheads and generated ticks.</p>
+      </a>
+    </section>
+  </main>
+</body>
+</html>
