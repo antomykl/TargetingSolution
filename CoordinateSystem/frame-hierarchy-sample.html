@@ -146,6 +146,18 @@
     </p>
 
     <div class="controls">
+      <label for="droneYaw">Drone yaw</label>
+      <input id="droneYaw" type="range" min="-180" max="180" step="1" value="24" />
+      <span id="droneYawValue" class="value">24 deg</span>
+
+      <label for="dronePitch">Drone pitch</label>
+      <input id="dronePitch" type="range" min="-40" max="40" step="1" value="-7" />
+      <span id="dronePitchValue" class="value">-7 deg</span>
+
+      <label for="droneRoll">Drone roll</label>
+      <input id="droneRoll" type="range" min="-45" max="45" step="1" value="12" />
+      <span id="droneRollValue" class="value">12 deg</span>
+
       <label for="camTilt">Forward camera tilt</label>
       <input id="camTilt" type="range" min="-35" max="35" step="1" value="-18" />
       <span id="camTiltValue" class="value">-18 deg</span>
@@ -183,6 +195,12 @@
     const SVG_NS = "http://www.w3.org/2000/svg";
 
     const scene = document.getElementById("scene");
+    const droneYawInput = document.getElementById("droneYaw");
+    const dronePitchInput = document.getElementById("dronePitch");
+    const droneRollInput = document.getElementById("droneRoll");
+    const droneYawValue = document.getElementById("droneYawValue");
+    const dronePitchValue = document.getElementById("dronePitchValue");
+    const droneRollValue = document.getElementById("droneRollValue");
     const camTiltInput = document.getElementById("camTilt");
     const camTiltValue = document.getElementById("camTiltValue");
     const gridLayer = document.getElementById("gridLayer");
@@ -361,11 +379,18 @@
       drawGrid();
 
       const camTiltDeg = Number(camTiltInput.value);
+      const yawDeg = Number(droneYawInput.value);
+      const pitchDeg = Number(dronePitchInput.value);
+      const rollDeg = Number(droneRollInput.value);
+
+      droneYawValue.textContent = yawDeg + " deg";
+      dronePitchValue.textContent = pitchDeg + " deg";
+      droneRollValue.textContent = rollDeg + " deg";
       camTiltValue.textContent = camTiltDeg + " deg";
 
       const R_ned = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
       const droneOrigin = [2.3, 1.2, 1.1];
-      const R_ned_from_drone = mulMatMat(rz(degToRad(24)), mulMatMat(ry(degToRad(-7)), rx(degToRad(12))));
+      const R_ned_from_drone = mulMatMat(rz(degToRad(yawDeg)), mulMatMat(ry(degToRad(pitchDeg)), rx(degToRad(rollDeg))));
 
       const fwdCamOffsetDrone = [0.42, 0.0, 0.08];
       const bottomCamOffsetDrone = [0.05, 0.02, 0.18];
@@ -401,9 +426,13 @@
       labelLayer.appendChild(createText2D({ x: (drone2d.x + bottom2d.x) / 2 + 4, y: (drone2d.y + bottom2d.y) / 2 - 6 }, "mount", "#6f7d85", 11));
 
       labelLayer.appendChild(createText2D({ x: 26, y: 30 }, "NED: X=North, Y=East, Z=Down", "#4a5b65", 12));
-      labelLayer.appendChild(createText2D({ x: 26, y: 48 }, "Front camera tilt is relative to drone Y-axis", "#4a5b65", 12));
+      labelLayer.appendChild(createText2D({ x: 26, y: 48 }, "Drone attitude follows yaw-pitch-roll controls", "#4a5b65", 12));
+      labelLayer.appendChild(createText2D({ x: 26, y: 66 }, "Front camera tilt is relative to drone Y-axis", "#4a5b65", 12));
     }
 
+    droneYawInput.addEventListener("input", render);
+    dronePitchInput.addEventListener("input", render);
+    droneRollInput.addEventListener("input", render);
     camTiltInput.addEventListener("input", render);
     render();
   </script>
