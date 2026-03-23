@@ -80,35 +80,69 @@
       margin-bottom: 12px;
     }
 
-    .controls input[type="range"] {
-      width: 220px;
+    .ctrl-groups {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
     }
 
-    .controls .value {
-      min-width: 70px;
+    .ctrl-group {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px 8px;
+      background: #f3f6f8;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .group-header label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .group-body {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 5px;
+      border-top: 1px dashed #d4dce0;
+    }
+
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ctrl-row label {
+      min-width: 54px;
+      cursor: pointer;
+    }
+
+    .ctrl-row input[type="range"] {
+      width: 170px;
+    }
+
+    .ctrl-row .value {
+      min-width: 60px;
       font-weight: 600;
     }
 
     .checks {
       width: 100%;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      padding-top: 4px;
+      padding-top: 6px;
       border-top: 1px dashed #d9e2e7;
-      margin-top: 2px;
-    }
-
-    .checks label {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      margin-top: 4px;
     }
 
     .checks .state {
       color: #5b6971;
-      white-space: nowrap;
     }
 
     .board {
@@ -158,9 +192,6 @@
       color: var(--muted);
     }
 
-    .ctrl-group {
-      display: contents;
-    }
   </style>
 </head>
 <body>
@@ -172,62 +203,94 @@
     </p>
 
     <div class="controls">
-      <div id="droneSliders" class="ctrl-group">
-        <label for="droneYaw">Drone yaw</label>
-        <input id="droneYaw" type="range" min="-180" max="180" step="1" value="24" />
-        <span id="droneYawValue" class="value">24 deg</span>
+      <div class="ctrl-groups">
 
-        <label for="dronePitch">Drone pitch</label>
-        <input id="dronePitch" type="range" min="-40" max="40" step="1" value="-7" />
-        <span id="dronePitchValue" class="value">-7 deg</span>
+        <div class="ctrl-group">
+          <div class="group-header"><label><input id="showNed" type="checkbox" checked />NED</label></div>
+        </div>
 
-        <label for="droneRoll">Drone roll</label>
-        <input id="droneRoll" type="range" min="-45" max="45" step="1" value="12" />
-        <span id="droneRollValue" class="value">12 deg</span>
+        <div class="ctrl-group">
+          <div class="group-header"><label><input id="showDrone" type="checkbox" checked />Drone</label></div>
+          <div id="droneSliders" class="group-body">
+            <div class="ctrl-row">
+              <label for="droneAltitude">Altitude</label>
+              <input id="droneAltitude" type="range" min="0" max="6" step="0.1" value="3.0" />
+              <span id="droneAltitudeValue" class="value">3.0 m</span>
+            </div>
+            <div class="ctrl-row">
+              <label for="droneYaw">Yaw</label>
+              <input id="droneYaw" type="range" min="-180" max="180" step="1" value="24" />
+              <span id="droneYawValue" class="value">24 deg</span>
+            </div>
+            <div class="ctrl-row">
+              <label for="dronePitch">Pitch</label>
+              <input id="dronePitch" type="range" min="-40" max="40" step="1" value="-7" />
+              <span id="dronePitchValue" class="value">-7 deg</span>
+            </div>
+            <div class="ctrl-row">
+              <label for="droneRoll">Roll</label>
+              <input id="droneRoll" type="range" min="-45" max="45" step="1" value="12" />
+              <span id="droneRollValue" class="value">12 deg</span>
+            </div>
+          </div>
+        </div>
 
-        <label for="droneAltitude">Drone altitude</label>
-        <input id="droneAltitude" type="range" min="0" max="6" step="0.1" value="3.0" />
-        <span id="droneAltitudeValue" class="value">3.0 m</span>
+        <div class="ctrl-group">
+          <div class="group-header"><label><input id="showFrontCam" type="checkbox" checked />Front Cam</label></div>
+          <div id="frontCamSliders" class="group-body">
+            <div class="ctrl-row">
+              <label for="camTilt">Tilt</label>
+              <input id="camTilt" type="range" min="-35" max="35" step="1" value="-18" />
+              <span id="camTiltValue" class="value">-18 deg</span>
+            </div>
+            <div class="ctrl-row">
+              <label for="frontFov">FOV</label>
+              <input id="frontFov" type="range" min="20" max="120" step="1" value="68" />
+              <span id="frontFovValue" class="value">68 deg</span>
+            </div>
+            <div class="ctrl-row">
+              <label for="frontFoh">FoH</label>
+              <input id="frontFoh" type="range" min="20" max="120" step="1" value="52" />
+              <span id="frontFohValue" class="value">52 deg</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl-group">
+          <div class="group-header"><label><input id="showBottomCam" type="checkbox" />Bottom Cam</label></div>
+          <div id="bottomCamSliders" class="group-body">
+            <div class="ctrl-row">
+              <label for="bottomFov">FOV</label>
+              <input id="bottomFov" type="range" min="20" max="140" step="1" value="92" />
+              <span id="bottomFovValue" class="value">92 deg</span>
+            </div>
+            <div class="ctrl-row">
+              <label for="bottomFoh">FoH</label>
+              <input id="bottomFoh" type="range" min="20" max="140" step="1" value="92" />
+              <span id="bottomFohValue" class="value">92 deg</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl-group">
+          <div class="group-header"><label><input id="showFov" type="checkbox" checked />Camera FOV</label></div>
+          <div id="fovSettings" class="group-body">
+            <div class="ctrl-row">
+              <label><input id="squareView" type="checkbox" />Square view</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl-group">
+          <div class="group-header"><label><input id="showCamVector" type="checkbox" checked />Camera Vector</label></div>
+          <div class="group-body">
+            <div class="ctrl-row"><span>[2.2, 0.6, 1.8]</span></div>
+          </div>
+        </div>
+
       </div>
-
-      <div id="frontCamSliders" class="ctrl-group">
-        <label for="camTilt">Forward camera tilt</label>
-        <input id="camTilt" type="range" min="-35" max="35" step="1" value="-18" />
-        <span id="camTiltValue" class="value">-18 deg</span>
-
-        <label for="frontFov">Front cam FOV</label>
-        <input id="frontFov" type="range" min="20" max="120" step="1" value="68" />
-        <span id="frontFovValue" class="value">68 deg</span>
-
-        <label for="frontFoh">Front cam FoH</label>
-        <input id="frontFoh" type="range" min="20" max="120" step="1" value="52" />
-        <span id="frontFohValue" class="value">52 deg</span>
-      </div>
-
-      <div id="bottomCamSliders" class="ctrl-group">
-        <label for="bottomFov">Bottom cam FOV</label>
-        <input id="bottomFov" type="range" min="20" max="140" step="1" value="92" />
-        <span id="bottomFovValue" class="value">92 deg</span>
-
-        <label for="bottomFoh">Bottom cam FoH</label>
-        <input id="bottomFoh" type="range" min="20" max="140" step="1" value="92" />
-        <span id="bottomFohValue" class="value">92 deg</span>
-      </div>
-
-      <div id="fovSettings" class="ctrl-group">
-        <label><input id="squareView" type="checkbox" />Square view</label>
-      </div>
-
-      <span>Camera point vector:</span>
-      <strong>[2.2, 0.6, 1.8]</strong>
 
       <div class="checks">
-        <label><input id="showNed" type="checkbox" checked />NED</label>
-        <label><input id="showDrone" type="checkbox" checked />Drone</label>
-        <label><input id="showFrontCam" type="checkbox" checked />Front Cam</label>
-        <label><input id="showBottomCam" type="checkbox" />Bottom Cam</label>
-        <label><input id="showFov" type="checkbox" checked />Camera FOV</label>
-        <label><input id="showCamVector" type="checkbox" checked />Camera Vector</label>
         <span id="visibleState" class="state"></span>
       </div>
     </div>
@@ -543,10 +606,10 @@
     }
 
     function updateSliderVisibility() {
-      droneSlidersGroup.style.display = showDroneInput.checked ? "contents" : "none";
-      frontCamSlidersGroup.style.display = showFrontCamInput.checked ? "contents" : "none";
-      bottomCamSlidersGroup.style.display = showBottomCamInput.checked ? "contents" : "none";
-      fovSettingsGroup.style.display = showFovInput.checked ? "contents" : "none";
+      droneSlidersGroup.style.display = showDroneInput.checked ? "" : "none";
+      frontCamSlidersGroup.style.display = showFrontCamInput.checked ? "" : "none";
+      bottomCamSlidersGroup.style.display = showBottomCamInput.checked ? "" : "none";
+      fovSettingsGroup.style.display = showFovInput.checked ? "" : "none";
     }
 
     function updateFohControlState() {
