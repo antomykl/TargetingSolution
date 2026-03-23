@@ -232,7 +232,7 @@
     <h1>Frame Hierarchy: NED -> Drone -> Cameras</h1>
     <p class="sub">
       Main frame is NED (North-East-Down). Drone body frame is rotated relative to NED. Two camera frames are attached to the drone:
-      a forward camera with configurable tilt and a bottom camera for nadir view. The magenta arrow is a point vector expressed in the forward camera frame.
+      a forward camera with configurable tilt and a bottom camera for nadir view.
     </p>
 
     <div class="controls">
@@ -301,13 +301,6 @@
           </div>
         </div>
 
-        <div class="ctrl-group">
-          <div class="group-header"><label><input id="showCamVector" type="checkbox" checked />Camera Vector</label></div>
-          <div class="group-body">
-            <div class="ctrl-row"><span>[2.2, 0.6, 1.8]</span></div>
-          </div>
-        </div>
-
       </div>
 
       <div class="checks">
@@ -339,6 +332,9 @@
       <div class="ctrl-row">
         <label><input id="squareView" type="checkbox" />Square view</label>
       </div>
+      <div class="ctrl-row">
+        <label><input id="showCamAxes" type="checkbox" checked />Camera axes</label>
+      </div>
       <button id="zoomOut" class="zoom-btn" type="button">-</button>
       <button id="zoomIn" class="zoom-btn" type="button">+</button>
       <button id="zoomReset" class="zoom-btn" type="button">Reset</button>
@@ -351,7 +347,7 @@
       <span class="legend-item"><span class="dot" style="background:#b6543f"></span>Forward camera frame</span>
       <span class="legend-item"><span class="dot" style="background:#6a4fb3"></span>Bottom camera frame</span>
       <span class="legend-item"><span class="dot" style="background:#f2b39e"></span>Camera FOV cones</span>
-      <span class="legend-item"><span class="dot" style="background:#cf2f88"></span>Point vector in forward camera frame</span>
+      <span class="legend-item"><span class="dot" style="background:#cf2f88"></span>Camera look vectors (to FOV surface)</span>
       <span class="legend-item"><span class="dot" style="background:#d43d3d"></span>X / <span class="dot" style="background:#239659"></span>Y / <span class="dot" style="background:#356fcf"></span>Z axes</span>
     </div>
 
@@ -392,10 +388,10 @@
     const droneSlidersGroup = document.getElementById("droneSliders");
     const frontCamSlidersGroup = document.getElementById("frontCamSliders");
     const bottomCamSlidersGroup = document.getElementById("bottomCamSliders");
+    const showCamAxesInput = document.getElementById("showCamAxes");
     const showDroneInput = document.getElementById("showDrone");
     const showFrontCamInput = document.getElementById("showFrontCam");
     const showBottomCamInput = document.getElementById("showBottomCam");
-    const showCamVectorInput = document.getElementById("showCamVector");
     const visibleState = document.getElementById("visibleState");
     const gridLayer = document.getElementById("gridLayer");
     const frameLayer = document.getElementById("frameLayer");
@@ -419,8 +415,6 @@
       scale: 58,
       axisLen: 1.7
     };
-
-    const cameraPoint = [2.2, 0.6, 1.8];
 
     let R_view = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     let zoomFactor = 1;
@@ -667,6 +661,15 @@
       });
     }
 
+    function drawCameraSurfaceVector(origin, R, range, color, label) {
+      const target = add(origin, mulMatVec(R, [range, 0, 0]));
+      const p0 = project(origin);
+      const p1 = project(target);
+      vectorLayer.appendChild(createLine2D(p0, p1, color, 2.4));
+      vectorLayer.appendChild(createPoint2D(p1, color, 4.2));
+      labelLayer.appendChild(createText2D({ x: p1.x + 7, y: p1.y - 7 }, label, color, 12));
+    }
+
     function updateSliderVisibility() {
       droneSlidersGroup.style.display = showDroneInput.checked ? "" : "none";
       frontCamSlidersGroup.style.display = showFrontCamInput.checked ? "" : "none";
@@ -717,7 +720,7 @@
       const showDrone = showDroneInput.checked;
       const showFrontCam = showFrontCamInput.checked;
       const showBottomCam = showBottomCamInput.checked;
-      const showCamVector = showCamVectorInput.checked;
+      const showCamAxes = showCamAxesInput.checked;
       const squareView = squareViewInput.checked;
 
       const visibleNames = [];
@@ -734,8 +737,8 @@
       if (showFrontCam || showBottomCam) {
         visibleNames.push(squareView ? "FOV square" : "FOV");
       }
-      if (showCamVector) {
-        visibleNames.push("Vector");
+      if ((showFrontCam || showBottomCam) && showCamAxes) {
+        visibleNames.push("Cam axes");
       }
       visibleState.textContent = "Visible: " + (visibleNames.length ? visibleNames.join(", ") : "none");
 
@@ -754,29 +757,30 @@
 
       const R_drone_from_bottomCam = ry(degToRad(-90));
       const R_ned_from_bottomCam = mulMatMat(R_ned_from_drone, R_drone_from_bottomCam);
+      const frontFovRange = 2.5;
+      const bottomFovRange = 2.2;
 
       if (showFrontCam) {
-        drawCameraFov(fwdCamOrigin, R_ned_from_fwdCam, frontFovDeg, squareView ? frontFovDeg : frontFohDeg, 2.5, "x", "#c36a4d", "rgba(198, 106, 77, 0.18)");
+        drawCameraFov(fwdCamOrigin, R_ned_from_fwdCam, frontFovDeg, squareView ? frontFovDeg : frontFohDeg, frontFovRange, "x", "#c36a4d", "rgba(198, 106, 77, 0.18)");
+        drawCameraSurfaceVector(fwdCamOrigin, R_ned_from_fwdCam, frontFovRange, colors.vector, "v_front");
       }
       if (showBottomCam) {
-        drawCameraFov(bottomCamOrigin, R_ned_from_bottomCam, bottomFovDeg, squareView ? bottomFovDeg : bottomFohDeg, 2.2, "x", "#7b61b8", "rgba(123, 97, 184, 0.16)");
+        drawCameraFov(bottomCamOrigin, R_ned_from_bottomCam, bottomFovDeg, squareView ? bottomFovDeg : bottomFohDeg, bottomFovRange, "x", "#7b61b8", "rgba(123, 97, 184, 0.16)");
+        drawCameraSurfaceVector(bottomCamOrigin, R_ned_from_bottomCam, bottomFovRange, colors.vector, "v_bottom");
       }
 
       drawFrame([0, 0, 0], R_ned, "NED", colors.ned, 1.12, "N");
       if (showDrone) {
         drawFrame(droneOrigin, R_ned_from_drone, "Drone", colors.drone, 0.92, "D");
       }
-      if (showFrontCam) {
+      if (showFrontCam && showCamAxes) {
         drawFrame(fwdCamOrigin, R_ned_from_fwdCam, "Front Cam", colors.camForward, 0.78, "Cf");
       }
-      if (showBottomCam) {
+      if (showBottomCam && showCamAxes) {
         drawFrame(bottomCamOrigin, R_ned_from_bottomCam, "Bottom Cam", colors.camBottom, 0.72, "Cb");
       }
 
-      const worldPointFromCam = add(fwdCamOrigin, mulMatVec(R_ned_from_fwdCam, cameraPoint));
-
       const fwdCam2d = project(fwdCamOrigin);
-      const point2d = project(worldPointFromCam);
       const drone2d = project(droneOrigin);
       const bottom2d = project(bottomCamOrigin);
       const zero2d = project([0, 0, 0]);
@@ -784,12 +788,6 @@
       if (showDrone) {
         vectorLayer.appendChild(createLine2D(zero2d, drone2d, "#2f3d45", 2.2, true));
         labelLayer.appendChild(createText2D({ x: zero2d.x + 8, y: (zero2d.y + drone2d.y) / 2 - 6 }, "alt " + altitudeMeters.toFixed(1) + " m", "#2f3d45", 12));
-      }
-
-      if (showCamVector) {
-        vectorLayer.appendChild(createLine2D(fwdCam2d, point2d, colors.vector, 2.8));
-        vectorLayer.appendChild(createPoint2D(point2d, colors.vector, 4.6));
-        labelLayer.appendChild(createText2D({ x: point2d.x + 8, y: point2d.y - 8 }, "p_cam", colors.vector, 12));
       }
 
       if (showDrone && showFrontCam) {
@@ -829,7 +827,7 @@
     showDroneInput.addEventListener("change", () => { updateSliderVisibility(); render(); });
     showFrontCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
     showBottomCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
-    showCamVectorInput.addEventListener("change", render);
+    showCamAxesInput.addEventListener("change", render);
     updateSliderVisibility();
     updateFohControlState();
     render();
