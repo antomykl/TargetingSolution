@@ -170,6 +170,21 @@
       width: 180px;
     }
 
+    .view-tools select,
+    .view-tools input[type="number"] {
+      border: 1px solid #b7c4cc;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #23333b;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.76rem;
+      padding: 3px 5px;
+    }
+
+    .view-tools input[type="number"] {
+      width: 58px;
+    }
+
     .zoom-btn {
       border: 1px solid #b7c4cc;
       border-radius: 7px;
@@ -335,6 +350,24 @@
       <div class="ctrl-row">
         <label><input id="showCamAxes" type="checkbox" checked />Camera axes</label>
       </div>
+      <div class="ctrl-row">
+        <label for="fovResolution">Res</label>
+        <select id="fovResolution">
+          <option value="8x6">8x6</option>
+          <option value="16x12" selected>16x12</option>
+          <option value="32x24">32x24</option>
+        </select>
+      </div>
+      <div class="ctrl-row">
+        <label for="frontPixelX">Front px</label>
+        <input id="frontPixelX" type="number" min="0" step="1" value="8" />
+        <input id="frontPixelY" type="number" min="0" step="1" value="6" />
+      </div>
+      <div class="ctrl-row">
+        <label for="bottomPixelX">Bottom px</label>
+        <input id="bottomPixelX" type="number" min="0" step="1" value="8" />
+        <input id="bottomPixelY" type="number" min="0" step="1" value="6" />
+      </div>
       <button id="zoomOut" class="zoom-btn" type="button">-</button>
       <button id="zoomIn" class="zoom-btn" type="button">+</button>
       <button id="zoomReset" class="zoom-btn" type="button">Reset</button>
@@ -385,6 +418,11 @@
     const zoomOutButton = document.getElementById("zoomOut");
     const zoomResetButton = document.getElementById("zoomReset");
     const zoomValue = document.getElementById("zoomValue");
+    const fovResolutionInput = document.getElementById("fovResolution");
+    const frontPixelXInput = document.getElementById("frontPixelX");
+    const frontPixelYInput = document.getElementById("frontPixelY");
+    const bottomPixelXInput = document.getElementById("bottomPixelX");
+    const bottomPixelYInput = document.getElementById("bottomPixelY");
     const droneSlidersGroup = document.getElementById("droneSliders");
     const frontCamSlidersGroup = document.getElementById("frontCamSliders");
     const bottomCamSlidersGroup = document.getElementById("bottomCamSliders");
@@ -418,6 +456,7 @@
 
     let R_view = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     let zoomFactor = 1;
+    let fovPickPoints = [];
 
     function degToRad(deg) {
       return (deg * Math.PI) / 180;
@@ -484,6 +523,33 @@
     function setZoom(nextZoom) {
       zoomFactor = Math.max(0.45, Math.min(2.8, nextZoom));
       render();
+    }
+
+    function clamp(value, minValue, maxValue) {
+      return Math.max(minValue, Math.min(maxValue, value));
+    }
+
+    function parseResolution() {
+      const parts = fovResolutionInput.value.split("x");
+      return {
+        width: Number(parts[0]),
+        height: Number(parts[1])
+      };
+    }
+
+    function updatePixelInputBounds() {
+      const res = parseResolution();
+      const maxX = res.width - 1;
+      const maxY = res.height - 1;
+
+      [frontPixelXInput, bottomPixelXInput].forEach((input) => {
+        input.max = String(maxX);
+        input.value = String(clamp(Number(input.value), 0, maxX));
+      });
+      [frontPixelYInput, bottomPixelYInput].forEach((input) => {
+        input.max = String(maxY);
+        input.value = String(clamp(Number(input.value), 0, maxY));
+      });
     }
 
     function createLine2D(p1, p2, color, width, dashed, withArrow) {
@@ -661,13 +727,48 @@
       });
     }
 
-    function drawCameraSurfaceVector(origin, R, range, color, label) {
-      const target = add(origin, mulMatVec(R, [range, 0, 0]));
+    function getCameraPixelTarget(origin, R, range, fovDeg, fohDeg, pixelX, pixelY, resWidth, resHeight) {
+      const halfH = degToRad(fovDeg / 2);
+      const halfV = degToRad(fohDeg / 2);
+      const hw = range * Math.tan(halfH);
+      const hh = range * Math.tan(halfV);
+
+      const yLocal = ((pixelX + 0.5) / resWidth * 2 - 1) * hw;
+      const zLocal = ((pixelY + 0.5) / resHeight * 2 - 1) * hh;
+      return add(origin, mulMatVec(R, [range, yLocal, zLocal]));
+    }
+
+    function drawCameraSurfaceVector(origin, target, color, label) {
       const p0 = project(origin);
       const p1 = project(target);
       vectorLayer.appendChild(createLine2D(p0, p1, color, 2.4));
       vectorLayer.appendChild(createPoint2D(p1, color, 4.2));
       labelLayer.appendChild(createText2D({ x: p1.x + 7, y: p1.y - 7 }, label, color, 12));
+    }
+
+    function drawFovPixelGrid(origin, R, range, fovDeg, fohDeg, resWidth, resHeight, selectedX, selectedY, color, cameraTag) {
+      const halfH = degToRad(fovDeg / 2);
+      const halfV = degToRad(fohDeg / 2);
+      const hw = range * Math.tan(halfH);
+      const hh = range * Math.tan(halfV);
+
+      for (let py = 0; py < resHeight; py += 1) {
+        for (let px = 0; px < resWidth; px += 1) {
+          const yLocal = ((px + 0.5) / resWidth * 2 - 1) * hw;
+          const zLocal = ((py + 0.5) / resHeight * 2 - 1) * hh;
+          const worldPoint = add(origin, mulMatVec(R, [range, yLocal, zLocal]));
+          const p2 = project(worldPoint);
+          const selected = px === selectedX && py === selectedY;
+          vectorLayer.appendChild(createPoint2D(p2, selected ? color : "rgba(33, 45, 52, 0.35)", selected ? 3.2 : 1.4));
+          fovPickPoints.push({
+            camera: cameraTag,
+            px,
+            py,
+            x: p2.x,
+            y: p2.y
+          });
+        }
+      }
     }
 
     function updateSliderVisibility() {
@@ -688,6 +789,7 @@
       clearGroup(frameLayer);
       clearGroup(vectorLayer);
       clearGroup(labelLayer);
+      fovPickPoints = [];
       drawGrid();
 
       const camTiltDeg = Number(camTiltInput.value);
@@ -722,6 +824,16 @@
       const showBottomCam = showBottomCamInput.checked;
       const showCamAxes = showCamAxesInput.checked;
       const squareView = squareViewInput.checked;
+      const resolution = parseResolution();
+      const frontPixelX = clamp(Number(frontPixelXInput.value), 0, resolution.width - 1);
+      const frontPixelY = clamp(Number(frontPixelYInput.value), 0, resolution.height - 1);
+      const bottomPixelX = clamp(Number(bottomPixelXInput.value), 0, resolution.width - 1);
+      const bottomPixelY = clamp(Number(bottomPixelYInput.value), 0, resolution.height - 1);
+
+      frontPixelXInput.value = String(frontPixelX);
+      frontPixelYInput.value = String(frontPixelY);
+      bottomPixelXInput.value = String(bottomPixelX);
+      bottomPixelYInput.value = String(bottomPixelY);
 
       const visibleNames = [];
       visibleNames.push("NED");
@@ -739,6 +851,9 @@
       }
       if ((showFrontCam || showBottomCam) && showCamAxes) {
         visibleNames.push("Cam axes");
+      }
+      if (showFrontCam || showBottomCam) {
+        visibleNames.push("pixel grid " + resolution.width + "x" + resolution.height);
       }
       visibleState.textContent = "Visible: " + (visibleNames.length ? visibleNames.join(", ") : "none");
 
@@ -762,11 +877,67 @@
 
       if (showFrontCam) {
         drawCameraFov(fwdCamOrigin, R_ned_from_fwdCam, frontFovDeg, squareView ? frontFovDeg : frontFohDeg, frontFovRange, "x", "#c36a4d", "rgba(198, 106, 77, 0.18)");
-        drawCameraSurfaceVector(fwdCamOrigin, R_ned_from_fwdCam, frontFovRange, colors.vector, "v_front");
+        drawFovPixelGrid(
+          fwdCamOrigin,
+          R_ned_from_fwdCam,
+          frontFovRange,
+          frontFovDeg,
+          squareView ? frontFovDeg : frontFohDeg,
+          resolution.width,
+          resolution.height,
+          frontPixelX,
+          frontPixelY,
+          "#d74f96",
+          "front"
+        );
+        drawCameraSurfaceVector(
+          fwdCamOrigin,
+          getCameraPixelTarget(
+            fwdCamOrigin,
+            R_ned_from_fwdCam,
+            frontFovRange,
+            frontFovDeg,
+            squareView ? frontFovDeg : frontFohDeg,
+            frontPixelX,
+            frontPixelY,
+            resolution.width,
+            resolution.height
+          ),
+          colors.vector,
+          "v_front"
+        );
       }
       if (showBottomCam) {
         drawCameraFov(bottomCamOrigin, R_ned_from_bottomCam, bottomFovDeg, squareView ? bottomFovDeg : bottomFohDeg, bottomFovRange, "x", "#7b61b8", "rgba(123, 97, 184, 0.16)");
-        drawCameraSurfaceVector(bottomCamOrigin, R_ned_from_bottomCam, bottomFovRange, colors.vector, "v_bottom");
+        drawFovPixelGrid(
+          bottomCamOrigin,
+          R_ned_from_bottomCam,
+          bottomFovRange,
+          bottomFovDeg,
+          squareView ? bottomFovDeg : bottomFohDeg,
+          resolution.width,
+          resolution.height,
+          bottomPixelX,
+          bottomPixelY,
+          "#bb56a8",
+          "bottom"
+        );
+        drawCameraSurfaceVector(
+          bottomCamOrigin,
+          getCameraPixelTarget(
+            bottomCamOrigin,
+            R_ned_from_bottomCam,
+            bottomFovRange,
+            bottomFovDeg,
+            squareView ? bottomFovDeg : bottomFohDeg,
+            bottomPixelX,
+            bottomPixelY,
+            resolution.width,
+            resolution.height
+          ),
+          colors.vector,
+          "v_bottom"
+        );
       }
 
       drawFrame([0, 0, 0], R_ned, "NED", colors.ned, 1.12, "N");
@@ -824,10 +995,54 @@
       updateFohControlState();
       render();
     });
+    fovResolutionInput.addEventListener("change", () => {
+      updatePixelInputBounds();
+      render();
+    });
+    frontPixelXInput.addEventListener("input", render);
+    frontPixelYInput.addEventListener("input", render);
+    bottomPixelXInput.addEventListener("input", render);
+    bottomPixelYInput.addEventListener("input", render);
     showDroneInput.addEventListener("change", () => { updateSliderVisibility(); render(); });
     showFrontCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
     showBottomCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
     showCamAxesInput.addEventListener("change", render);
+
+    scene.addEventListener("click", (event) => {
+      if (!fovPickPoints.length) {
+        return;
+      }
+
+      const rect = scene.getBoundingClientRect();
+      const vb = scene.viewBox.baseVal;
+      const sx = (event.clientX - rect.left) * (vb.width / rect.width);
+      const sy = (event.clientY - rect.top) * (vb.height / rect.height);
+
+      let best = null;
+      let bestDist = Number.POSITIVE_INFINITY;
+      fovPickPoints.forEach((point) => {
+        const dx = point.x - sx;
+        const dy = point.y - sy;
+        const dist = Math.hypot(dx, dy);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = point;
+        }
+      });
+
+      if (best && bestDist <= 12) {
+        if (best.camera === "front") {
+          frontPixelXInput.value = String(best.px);
+          frontPixelYInput.value = String(best.py);
+        } else {
+          bottomPixelXInput.value = String(best.px);
+          bottomPixelYInput.value = String(best.py);
+        }
+        render();
+      }
+    });
+
+    updatePixelInputBounds();
     updateSliderVisibility();
     updateFohControlState();
     render();
