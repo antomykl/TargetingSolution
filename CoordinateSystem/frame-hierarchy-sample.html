@@ -89,6 +89,28 @@
       font-weight: 600;
     }
 
+    .checks {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      padding-top: 4px;
+      border-top: 1px dashed #d9e2e7;
+      margin-top: 2px;
+    }
+
+    .checks label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .checks .state {
+      color: #5b6971;
+      white-space: nowrap;
+    }
+
     .board {
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -163,6 +185,15 @@
       <span id="camTiltValue" class="value">-18 deg</span>
       <span>Camera point vector:</span>
       <strong>[2.2, 0.6, 1.8]</strong>
+
+      <div class="checks">
+        <label><input id="showNed" type="checkbox" checked />NED</label>
+        <label><input id="showDrone" type="checkbox" checked />Drone</label>
+        <label><input id="showFrontCam" type="checkbox" checked />Front Cam</label>
+        <label><input id="showBottomCam" type="checkbox" checked />Bottom Cam</label>
+        <label><input id="showCamVector" type="checkbox" checked />Camera Vector</label>
+        <span id="visibleState" class="state"></span>
+      </div>
     </div>
 
     <div class="board">
@@ -203,6 +234,12 @@
     const droneRollValue = document.getElementById("droneRollValue");
     const camTiltInput = document.getElementById("camTilt");
     const camTiltValue = document.getElementById("camTiltValue");
+    const showNedInput = document.getElementById("showNed");
+    const showDroneInput = document.getElementById("showDrone");
+    const showFrontCamInput = document.getElementById("showFrontCam");
+    const showBottomCamInput = document.getElementById("showBottomCam");
+    const showCamVectorInput = document.getElementById("showCamVector");
+    const visibleState = document.getElementById("visibleState");
     const gridLayer = document.getElementById("gridLayer");
     const frameLayer = document.getElementById("frameLayer");
     const vectorLayer = document.getElementById("vectorLayer");
@@ -388,6 +425,30 @@
       droneRollValue.textContent = rollDeg + " deg";
       camTiltValue.textContent = camTiltDeg + " deg";
 
+      const showNed = showNedInput.checked;
+      const showDrone = showDroneInput.checked;
+      const showFrontCam = showFrontCamInput.checked;
+      const showBottomCam = showBottomCamInput.checked;
+      const showCamVector = showCamVectorInput.checked;
+
+      const visibleNames = [];
+      if (showNed) {
+        visibleNames.push("NED");
+      }
+      if (showDrone) {
+        visibleNames.push("Drone");
+      }
+      if (showFrontCam) {
+        visibleNames.push("Front Cam");
+      }
+      if (showBottomCam) {
+        visibleNames.push("Bottom Cam");
+      }
+      if (showCamVector) {
+        visibleNames.push("Vector");
+      }
+      visibleState.textContent = "Visible: " + (visibleNames.length ? visibleNames.join(", ") : "none");
+
       const R_ned = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
       const droneOrigin = [2.3, 1.2, 1.1];
       const R_ned_from_drone = mulMatMat(rz(degToRad(yawDeg)), mulMatMat(ry(degToRad(pitchDeg)), rx(degToRad(rollDeg))));
@@ -404,10 +465,18 @@
       const R_drone_from_bottomCam = rx(degToRad(92));
       const R_ned_from_bottomCam = mulMatMat(R_ned_from_drone, R_drone_from_bottomCam);
 
-      drawFrame([0, 0, 0], R_ned, "NED", colors.ned, 1.12, "N");
-      drawFrame(droneOrigin, R_ned_from_drone, "Drone", colors.drone, 0.92, "D");
-      drawFrame(fwdCamOrigin, R_ned_from_fwdCam, "Front Cam", colors.camForward, 0.78, "Cf");
-      drawFrame(bottomCamOrigin, R_ned_from_bottomCam, "Bottom Cam", colors.camBottom, 0.72, "Cb");
+      if (showNed) {
+        drawFrame([0, 0, 0], R_ned, "NED", colors.ned, 1.12, "N");
+      }
+      if (showDrone) {
+        drawFrame(droneOrigin, R_ned_from_drone, "Drone", colors.drone, 0.92, "D");
+      }
+      if (showFrontCam) {
+        drawFrame(fwdCamOrigin, R_ned_from_fwdCam, "Front Cam", colors.camForward, 0.78, "Cf");
+      }
+      if (showBottomCam) {
+        drawFrame(bottomCamOrigin, R_ned_from_bottomCam, "Bottom Cam", colors.camBottom, 0.72, "Cb");
+      }
 
       const worldPointFromCam = add(fwdCamOrigin, mulMatVec(R_ned_from_fwdCam, cameraPoint));
 
@@ -416,14 +485,20 @@
       const drone2d = project(droneOrigin);
       const bottom2d = project(bottomCamOrigin);
 
-      vectorLayer.appendChild(createLine2D(fwdCam2d, point2d, colors.vector, 2.8));
-      vectorLayer.appendChild(createPoint2D(point2d, colors.vector, 4.6));
-      labelLayer.appendChild(createText2D({ x: point2d.x + 8, y: point2d.y - 8 }, "p_cam", colors.vector, 12));
+      if (showCamVector) {
+        vectorLayer.appendChild(createLine2D(fwdCam2d, point2d, colors.vector, 2.8));
+        vectorLayer.appendChild(createPoint2D(point2d, colors.vector, 4.6));
+        labelLayer.appendChild(createText2D({ x: point2d.x + 8, y: point2d.y - 8 }, "p_cam", colors.vector, 12));
+      }
 
-      vectorLayer.appendChild(createLine2D(drone2d, fwdCam2d, "#8a98a1", 1.6, true));
-      vectorLayer.appendChild(createLine2D(drone2d, bottom2d, "#8a98a1", 1.6, true));
-      labelLayer.appendChild(createText2D({ x: (drone2d.x + fwdCam2d.x) / 2 + 4, y: (drone2d.y + fwdCam2d.y) / 2 - 6 }, "mount", "#6f7d85", 11));
-      labelLayer.appendChild(createText2D({ x: (drone2d.x + bottom2d.x) / 2 + 4, y: (drone2d.y + bottom2d.y) / 2 - 6 }, "mount", "#6f7d85", 11));
+      if (showDrone && showFrontCam) {
+        vectorLayer.appendChild(createLine2D(drone2d, fwdCam2d, "#8a98a1", 1.6, true));
+        labelLayer.appendChild(createText2D({ x: (drone2d.x + fwdCam2d.x) / 2 + 4, y: (drone2d.y + fwdCam2d.y) / 2 - 6 }, "mount", "#6f7d85", 11));
+      }
+      if (showDrone && showBottomCam) {
+        vectorLayer.appendChild(createLine2D(drone2d, bottom2d, "#8a98a1", 1.6, true));
+        labelLayer.appendChild(createText2D({ x: (drone2d.x + bottom2d.x) / 2 + 4, y: (drone2d.y + bottom2d.y) / 2 - 6 }, "mount", "#6f7d85", 11));
+      }
 
       labelLayer.appendChild(createText2D({ x: 26, y: 30 }, "NED: X=North, Y=East, Z=Down", "#4a5b65", 12));
       labelLayer.appendChild(createText2D({ x: 26, y: 48 }, "Drone attitude follows yaw-pitch-roll controls", "#4a5b65", 12));
@@ -434,6 +509,11 @@
     dronePitchInput.addEventListener("input", render);
     droneRollInput.addEventListener("input", render);
     camTiltInput.addEventListener("input", render);
+    showNedInput.addEventListener("change", render);
+    showDroneInput.addEventListener("change", render);
+    showFrontCamInput.addEventListener("change", render);
+    showBottomCamInput.addEventListener("change", render);
+    showCamVectorInput.addEventListener("change", render);
     render();
   </script>
 </body>
