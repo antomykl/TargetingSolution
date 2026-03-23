@@ -2,11 +2,12 @@
 
 Static demos for coordinate systems using SVG and Canvas.
 
-## Local files
+## Structure
 
-- `index.html`
-- `svg-sample.html`
-- `canvas-sample.html`
+- `index.html` (root landing page)
+- `CoordinateSystem/index.html`
+- `CoordinateSystem/svg-sample.html`
+- `CoordinateSystem/canvas-sample.html`
 
 ## Deploy with GitHub Pages
 
