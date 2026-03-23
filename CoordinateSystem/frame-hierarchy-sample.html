@@ -152,6 +152,39 @@
       background: #fcfeff;
     }
 
+    .view-tools {
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #fbfdff;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.8rem;
+    }
+
+    .view-tools .ctrl-row input[type="range"] {
+      width: 180px;
+    }
+
+    .zoom-btn {
+      border: 1px solid #b7c4cc;
+      border-radius: 7px;
+      background: #eef3f6;
+      color: #23333b;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      padding: 4px 9px;
+      cursor: pointer;
+    }
+
+    .zoom-btn:hover {
+      background: #e4ecf1;
+    }
+
     svg {
       width: 100%;
       height: auto;
@@ -204,22 +237,6 @@
 
     <div class="controls">
       <div class="ctrl-groups">
-
-        <div class="ctrl-group">
-          <div class="group-header"><span style="font-weight:600">View</span></div>
-          <div class="group-body">
-            <div class="ctrl-row">
-              <label for="viewAzimuth">Azimuth</label>
-              <input id="viewAzimuth" type="range" min="-180" max="180" step="1" value="0" />
-              <span id="viewAzimuthValue" class="value">0 deg</span>
-            </div>
-            <div class="ctrl-row">
-              <label for="viewElevation">Elevation</label>
-              <input id="viewElevation" type="range" min="-60" max="60" step="1" value="0" />
-              <span id="viewElevationValue" class="value">0 deg</span>
-            </div>
-          </div>
-        </div>
 
         <div class="ctrl-group">
           <div class="group-header"><label><input id="showNed" type="checkbox" checked />NED</label></div>
@@ -320,6 +337,24 @@
       </svg>
     </div>
 
+    <div class="view-tools">
+      <strong>View</strong>
+      <div class="ctrl-row">
+        <label for="viewAzimuth">Azimuth</label>
+        <input id="viewAzimuth" type="range" min="-180" max="180" step="1" value="0" />
+        <span id="viewAzimuthValue" class="value">0 deg</span>
+      </div>
+      <div class="ctrl-row">
+        <label for="viewElevation">Elevation</label>
+        <input id="viewElevation" type="range" min="-60" max="60" step="1" value="0" />
+        <span id="viewElevationValue" class="value">0 deg</span>
+      </div>
+      <button id="zoomOut" class="zoom-btn" type="button">-</button>
+      <button id="zoomIn" class="zoom-btn" type="button">+</button>
+      <button id="zoomReset" class="zoom-btn" type="button">Reset</button>
+      <span id="zoomValue" class="value">100%</span>
+    </div>
+
     <div class="legend">
       <span class="legend-item"><span class="dot" style="background:#1f2a30"></span>NED frame origin</span>
       <span class="legend-item"><span class="dot" style="background:#7d4e21"></span>Drone frame origin</span>
@@ -360,6 +395,10 @@
     const viewElevationInput = document.getElementById("viewElevation");
     const viewAzimuthValue = document.getElementById("viewAzimuthValue");
     const viewElevationValue = document.getElementById("viewElevationValue");
+    const zoomInButton = document.getElementById("zoomIn");
+    const zoomOutButton = document.getElementById("zoomOut");
+    const zoomResetButton = document.getElementById("zoomReset");
+    const zoomValue = document.getElementById("zoomValue");
     const droneSlidersGroup = document.getElementById("droneSliders");
     const frontCamSlidersGroup = document.getElementById("frontCamSliders");
     const bottomCamSlidersGroup = document.getElementById("bottomCamSliders");
@@ -397,6 +436,7 @@
     const cameraPoint = [2.2, 0.6, 1.8];
 
     let R_view = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    let zoomFactor = 1;
 
     function degToRad(deg) {
       return (deg * Math.PI) / 180;
@@ -453,10 +493,16 @@
       const z = rotated[2];
       const u = x - 0.78 * y;
       const v = z + 0.38 * y;
+      const scale = cfg.scale * zoomFactor;
       return {
-        x: cfg.centerX + u * cfg.scale,
-        y: cfg.centerY + v * cfg.scale
+        x: cfg.centerX + u * scale,
+        y: cfg.centerY + v * scale
       };
+    }
+
+    function setZoom(nextZoom) {
+      zoomFactor = Math.max(0.45, Math.min(2.8, nextZoom));
+      render();
     }
 
     function createLine2D(p1, p2, color, width, dashed, withArrow) {
@@ -665,6 +711,7 @@
 
       viewAzimuthValue.textContent = viewAzimDeg + " deg";
       viewElevationValue.textContent = viewElevDeg + " deg";
+      zoomValue.textContent = Math.round(zoomFactor * 100) + "%";
       droneYawValue.textContent = yawDeg + " deg";
       dronePitchValue.textContent = pitchDeg + " deg";
       droneRollValue.textContent = rollDeg + " deg";
@@ -777,6 +824,9 @@
 
     viewAzimuthInput.addEventListener("input", render);
     viewElevationInput.addEventListener("input", render);
+    zoomOutButton.addEventListener("click", () => setZoom(zoomFactor / 1.15));
+    zoomInButton.addEventListener("click", () => setZoom(zoomFactor * 1.15));
+    zoomResetButton.addEventListener("click", () => setZoom(1));
     droneYawInput.addEventListener("input", render);
     dronePitchInput.addEventListener("input", render);
     droneRollInput.addEventListener("input", render);
