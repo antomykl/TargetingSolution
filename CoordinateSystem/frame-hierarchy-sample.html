@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NED, Drone, and Camera Frames</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg1: #eef2f0;
+      --bg2: #f8f4ea;
+      --ink: #172227;
+      --muted: #5d6b73;
+      --panel: #ffffff;
+      --border: #d4dce0;
+      --x: #d43d3d;
+      --y: #239659;
+      --z: #356fcf;
+      --ned: #1f2a30;
+      --drone: #7d4e21;
+      --camf: #b6543f;
+      --camb: #6a4fb3;
+      --vec: #cf2f88;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 16px;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 16%, rgba(33, 150, 89, 0.14), transparent 34%),
+        radial-gradient(circle at 86% 8%, rgba(106, 79, 179, 0.12), transparent 32%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+      display: grid;
+      place-items: center;
+    }
+
+    .wrap {
+      width: min(1020px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 14px 36px rgba(20, 33, 38, 0.12);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.2rem, 3vw, 1.75rem);
+      line-height: 1.2;
+    }
+
+    .sub {
+      margin: 8px 0 14px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .controls {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fbfdff;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.82rem;
+      margin-bottom: 12px;
+    }
+
+    .controls input[type="range"] {
+      width: 220px;
+    }
+
+    .controls .value {
+      min-width: 70px;
+      font-weight: 600;
+    }
+
+    .board {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fcfeff;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .legend {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fbfdff;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .caption {
+      margin-top: 10px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <h1>Frame Hierarchy: NED -> Drone -> Cameras</h1>
+    <p class="sub">
+      Main frame is NED (North-East-Down). Drone body frame is rotated relative to NED. Two camera frames are attached to the drone:
+      a forward camera with configurable tilt and a bottom camera for nadir view. The magenta arrow is a point vector expressed in the forward camera frame.
+    </p>
+
+    <div class="controls">
+      <label for="camTilt">Forward camera tilt</label>
+      <input id="camTilt" type="range" min="-35" max="35" step="1" value="-18" />
+      <span id="camTiltValue" class="value">-18 deg</span>
+      <span>Camera point vector:</span>
+      <strong>[2.2, 0.6, 1.8]</strong>
+    </div>
+
+    <div class="board">
+      <svg id="scene" viewBox="0 0 980 620" aria-label="NED, drone, and camera coordinate systems">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <g id="gridLayer"></g>
+        <g id="frameLayer"></g>
+        <g id="vectorLayer"></g>
+        <g id="labelLayer" font-family="IBM Plex Mono, monospace" font-size="12"></g>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="dot" style="background:#1f2a30"></span>NED frame origin</span>
+      <span class="legend-item"><span class="dot" style="background:#7d4e21"></span>Drone frame origin</span>
+      <span class="legend-item"><span class="dot" style="background:#b6543f"></span>Forward camera frame</span>
+      <span class="legend-item"><span class="dot" style="background:#6a4fb3"></span>Bottom camera frame</span>
+      <span class="legend-item"><span class="dot" style="background:#cf2f88"></span>Point vector in forward camera frame</span>
+      <span class="legend-item"><span class="dot" style="background:#d43d3d"></span>X / <span class="dot" style="background:#239659"></span>Y / <span class="dot" style="background:#356fcf"></span>Z axes</span>
+    </div>
+
+    <div class="caption">Notation: NED axes are X = North, Y = East, Z = Down. Frames are shown with a simple oblique projection for readability.</div>
+  </section>
+
+  <script>
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const scene = document.getElementById("scene");
+    const camTiltInput = document.getElementById("camTilt");
+    const camTiltValue = document.getElementById("camTiltValue");
+    const gridLayer = document.getElementById("gridLayer");
+    const frameLayer = document.getElementById("frameLayer");
+    const vectorLayer = document.getElementById("vectorLayer");
+    const labelLayer = document.getElementById("labelLayer");
+
+    const colors = {
+      x: "#d43d3d",
+      y: "#239659",
+      z: "#356fcf",
+      ned: "#1f2a30",
+      drone: "#7d4e21",
+      camForward: "#b6543f",
+      camBottom: "#6a4fb3",
+      vector: "#cf2f88"
+    };
+
+    const cfg = {
+      centerX: 470,
+      centerY: 345,
+      scale: 58,
+      axisLen: 1.7
+    };
+
+    const cameraPoint = [2.2, 0.6, 1.8];
+
+    function degToRad(deg) {
+      return (deg * Math.PI) / 180;
+    }
+
+    function clearGroup(group) {
+      while (group.firstChild) {
+        group.removeChild(group.firstChild);
+      }
+    }
+
+    function add(a, b) {
+      return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    }
+
+    function mulMatVec(m, v) {
+      return [
+        m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
+        m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
+        m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2]
+      ];
+    }
+
+    function mulMatMat(a, b) {
+      return [
+        [a[0][0] * b[0][0] + a[0][1] * b[1][0] + a[0][2] * b[2][0], a[0][0] * b[0][1] + a[0][1] * b[1][1] + a[0][2] * b[2][1], a[0][0] * b[0][2] + a[0][1] * b[1][2] + a[0][2] * b[2][2]],
+        [a[1][0] * b[0][0] + a[1][1] * b[1][0] + a[1][2] * b[2][0], a[1][0] * b[0][1] + a[1][1] * b[1][1] + a[1][2] * b[2][1], a[1][0] * b[0][2] + a[1][1] * b[1][2] + a[1][2] * b[2][2]],
+        [a[2][0] * b[0][0] + a[2][1] * b[1][0] + a[2][2] * b[2][0], a[2][0] * b[0][1] + a[2][1] * b[1][1] + a[2][2] * b[2][1], a[2][0] * b[0][2] + a[2][1] * b[1][2] + a[2][2] * b[2][2]]
+      ];
+    }
+
+    function rx(a) {
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      return [[1, 0, 0], [0, c, -s], [0, s, c]];
+    }
+
+    function ry(a) {
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      return [[c, 0, s], [0, 1, 0], [-s, 0, c]];
+    }
+
+    function rz(a) {
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      return [[c, -s, 0], [s, c, 0], [0, 0, 1]];
+    }
+
+    function project(worldPoint) {
+      const x = worldPoint[0];
+      const y = worldPoint[1];
+      const z = worldPoint[2];
+      const u = x - 0.78 * y;
+      const v = z + 0.38 * y;
+      return {
+        x: cfg.centerX + u * cfg.scale,
+        y: cfg.centerY + v * cfg.scale
+      };
+    }
+
+    function createLine2D(p1, p2, color, width, dashed) {
+      const line = document.createElementNS(SVG_NS, "line");
+      line.setAttribute("x1", p1.x.toFixed(2));
+      line.setAttribute("y1", p1.y.toFixed(2));
+      line.setAttribute("x2", p2.x.toFixed(2));
+      line.setAttribute("y2", p2.y.toFixed(2));
+      line.setAttribute("stroke", color);
+      line.setAttribute("stroke-width", width);
+      line.setAttribute("marker-end", "url(#arrow)");
+      if (dashed) {
+        line.setAttribute("stroke-dasharray", "6 5");
+      }
+      return line;
+    }
+
+    function createText2D(p, text, color, size) {
+      const t = document.createElementNS(SVG_NS, "text");
+      t.setAttribute("x", p.x.toFixed(2));
+      t.setAttribute("y", p.y.toFixed(2));
+      t.setAttribute("fill", color);
+      t.setAttribute("font-size", String(size || 12));
+      t.textContent = text;
+      return t;
+    }
+
+    function createPoint2D(p, color, radius) {
+      const c = document.createElementNS(SVG_NS, "circle");
+      c.setAttribute("cx", p.x.toFixed(2));
+      c.setAttribute("cy", p.y.toFixed(2));
+      c.setAttribute("r", String(radius || 4));
+      c.setAttribute("fill", color);
+      return c;
+    }
+
+    function drawGrid() {
+      clearGroup(gridLayer);
+      for (let i = -7; i <= 7; i += 1) {
+        const pA = project([i, -6, 0]);
+        const pB = project([i, 6, 0]);
+        const pC = project([-7, i, 0]);
+        const pD = project([7, i, 0]);
+
+        const l1 = document.createElementNS(SVG_NS, "line");
+        l1.setAttribute("x1", pA.x.toFixed(2));
+        l1.setAttribute("y1", pA.y.toFixed(2));
+        l1.setAttribute("x2", pB.x.toFixed(2));
+        l1.setAttribute("y2", pB.y.toFixed(2));
+        l1.setAttribute("stroke", "#e5ebef");
+        l1.setAttribute("stroke-width", i === 0 ? "1.4" : "1");
+        gridLayer.appendChild(l1);
+
+        const l2 = document.createElementNS(SVG_NS, "line");
+        l2.setAttribute("x1", pC.x.toFixed(2));
+        l2.setAttribute("y1", pC.y.toFixed(2));
+        l2.setAttribute("x2", pD.x.toFixed(2));
+        l2.setAttribute("y2", pD.y.toFixed(2));
+        l2.setAttribute("stroke", "#e5ebef");
+        l2.setAttribute("stroke-width", i === 0 ? "1.4" : "1");
+        gridLayer.appendChild(l2);
+      }
+    }
+
+    function drawFrame(origin, R, title, color, axisScale, axisPrefix) {
+      const o2 = project(origin);
+      frameLayer.appendChild(createPoint2D(o2, color, 4.2));
+      labelLayer.appendChild(createText2D({ x: o2.x + 7, y: o2.y - 8 }, title, color, 12));
+
+      const axisXEnd = add(origin, mulMatVec(R, [cfg.axisLen * axisScale, 0, 0]));
+      const axisYEnd = add(origin, mulMatVec(R, [0, cfg.axisLen * axisScale, 0]));
+      const axisZEnd = add(origin, mulMatVec(R, [0, 0, cfg.axisLen * axisScale]));
+
+      const x2 = project(axisXEnd);
+      const y2 = project(axisYEnd);
+      const z2 = project(axisZEnd);
+
+      frameLayer.appendChild(createLine2D(o2, x2, colors.x, 2.2));
+      frameLayer.appendChild(createLine2D(o2, y2, colors.y, 2.2));
+      frameLayer.appendChild(createLine2D(o2, z2, colors.z, 2.2));
+
+      labelLayer.appendChild(createText2D({ x: x2.x + 4, y: x2.y - 4 }, axisPrefix + "x", colors.x, 12));
+      labelLayer.appendChild(createText2D({ x: y2.x + 4, y: y2.y - 4 }, axisPrefix + "y", colors.y, 12));
+      labelLayer.appendChild(createText2D({ x: z2.x + 4, y: z2.y - 4 }, axisPrefix + "z", colors.z, 12));
+    }
+
+    function render() {
+      clearGroup(frameLayer);
+      clearGroup(vectorLayer);
+      clearGroup(labelLayer);
+      drawGrid();
+
+      const camTiltDeg = Number(camTiltInput.value);
+      camTiltValue.textContent = camTiltDeg + " deg";
+
+      const R_ned = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+      const droneOrigin = [2.3, 1.2, 1.1];
+      const R_ned_from_drone = mulMatMat(rz(degToRad(24)), mulMatMat(ry(degToRad(-7)), rx(degToRad(12))));
+
+      const fwdCamOffsetDrone = [0.42, 0.0, 0.08];
+      const bottomCamOffsetDrone = [0.05, 0.02, 0.18];
+
+      const fwdCamOrigin = add(droneOrigin, mulMatVec(R_ned_from_drone, fwdCamOffsetDrone));
+      const bottomCamOrigin = add(droneOrigin, mulMatVec(R_ned_from_drone, bottomCamOffsetDrone));
+
+      const R_drone_from_fwdCam = mulMatMat(rz(degToRad(4)), ry(degToRad(camTiltDeg)));
+      const R_ned_from_fwdCam = mulMatMat(R_ned_from_drone, R_drone_from_fwdCam);
+
+      const R_drone_from_bottomCam = rx(degToRad(92));
+      const R_ned_from_bottomCam = mulMatMat(R_ned_from_drone, R_drone_from_bottomCam);
+
+      drawFrame([0, 0, 0], R_ned, "NED", colors.ned, 1.12, "N");
+      drawFrame(droneOrigin, R_ned_from_drone, "Drone", colors.drone, 0.92, "D");
+      drawFrame(fwdCamOrigin, R_ned_from_fwdCam, "Front Cam", colors.camForward, 0.78, "Cf");
+      drawFrame(bottomCamOrigin, R_ned_from_bottomCam, "Bottom Cam", colors.camBottom, 0.72, "Cb");
+
+      const worldPointFromCam = add(fwdCamOrigin, mulMatVec(R_ned_from_fwdCam, cameraPoint));
+
+      const fwdCam2d = project(fwdCamOrigin);
+      const point2d = project(worldPointFromCam);
+      const drone2d = project(droneOrigin);
+      const bottom2d = project(bottomCamOrigin);
+
+      vectorLayer.appendChild(createLine2D(fwdCam2d, point2d, colors.vector, 2.8));
+      vectorLayer.appendChild(createPoint2D(point2d, colors.vector, 4.6));
+      labelLayer.appendChild(createText2D({ x: point2d.x + 8, y: point2d.y - 8 }, "p_cam", colors.vector, 12));
+
+      vectorLayer.appendChild(createLine2D(drone2d, fwdCam2d, "#8a98a1", 1.6, true));
+      vectorLayer.appendChild(createLine2D(drone2d, bottom2d, "#8a98a1", 1.6, true));
+      labelLayer.appendChild(createText2D({ x: (drone2d.x + fwdCam2d.x) / 2 + 4, y: (drone2d.y + fwdCam2d.y) / 2 - 6 }, "mount", "#6f7d85", 11));
+      labelLayer.appendChild(createText2D({ x: (drone2d.x + bottom2d.x) / 2 + 4, y: (drone2d.y + bottom2d.y) / 2 - 6 }, "mount", "#6f7d85", 11));
+
+      labelLayer.appendChild(createText2D({ x: 26, y: 30 }, "NED: X=North, Y=East, Z=Down", "#4a5b65", 12));
+      labelLayer.appendChild(createText2D({ x: 26, y: 48 }, "Front camera tilt is relative to drone Y-axis", "#4a5b65", 12));
+    }
+
+    camTiltInput.addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>

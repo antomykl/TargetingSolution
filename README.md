@@ -8,6 +8,7 @@ Static demos for coordinate systems using SVG and Canvas.
 - `CoordinateSystem/index.html`
 - `CoordinateSystem/svg-sample.html`
 - `CoordinateSystem/canvas-sample.html`
+- `CoordinateSystem/frame-hierarchy-sample.html`
 
 ## Deploy with GitHub Pages
 
