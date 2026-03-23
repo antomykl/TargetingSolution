@@ -302,15 +302,6 @@
         </div>
 
         <div class="ctrl-group">
-          <div class="group-header"><label><input id="showFov" type="checkbox" checked />Camera FOV</label></div>
-          <div id="fovSettings" class="group-body">
-            <div class="ctrl-row">
-              <label><input id="squareView" type="checkbox" />Square view</label>
-            </div>
-          </div>
-        </div>
-
-        <div class="ctrl-group">
           <div class="group-header"><label><input id="showCamVector" type="checkbox" checked />Camera Vector</label></div>
           <div class="group-body">
             <div class="ctrl-row"><span>[2.2, 0.6, 1.8]</span></div>
@@ -344,6 +335,9 @@
         <label for="viewElevation">Elevation</label>
         <input id="viewElevation" type="range" min="-60" max="60" step="1" value="0" />
         <span id="viewElevationValue" class="value">0 deg</span>
+      </div>
+      <div class="ctrl-row">
+        <label><input id="squareView" type="checkbox" />Square view</label>
       </div>
       <button id="zoomOut" class="zoom-btn" type="button">-</button>
       <button id="zoomIn" class="zoom-btn" type="button">+</button>
@@ -398,11 +392,9 @@
     const droneSlidersGroup = document.getElementById("droneSliders");
     const frontCamSlidersGroup = document.getElementById("frontCamSliders");
     const bottomCamSlidersGroup = document.getElementById("bottomCamSliders");
-    const fovSettingsGroup = document.getElementById("fovSettings");
     const showDroneInput = document.getElementById("showDrone");
     const showFrontCamInput = document.getElementById("showFrontCam");
     const showBottomCamInput = document.getElementById("showBottomCam");
-    const showFovInput = document.getElementById("showFov");
     const showCamVectorInput = document.getElementById("showCamVector");
     const visibleState = document.getElementById("visibleState");
     const gridLayer = document.getElementById("gridLayer");
@@ -679,7 +671,6 @@
       droneSlidersGroup.style.display = showDroneInput.checked ? "" : "none";
       frontCamSlidersGroup.style.display = showFrontCamInput.checked ? "" : "none";
       bottomCamSlidersGroup.style.display = showBottomCamInput.checked ? "" : "none";
-      fovSettingsGroup.style.display = showFovInput.checked ? "" : "none";
     }
 
     function updateFohControlState() {
@@ -726,7 +717,6 @@
       const showDrone = showDroneInput.checked;
       const showFrontCam = showFrontCamInput.checked;
       const showBottomCam = showBottomCamInput.checked;
-      const showFov = showFovInput.checked;
       const showCamVector = showCamVectorInput.checked;
       const squareView = squareViewInput.checked;
 
@@ -741,7 +731,7 @@
       if (showBottomCam) {
         visibleNames.push("Bottom Cam");
       }
-      if (showFov) {
+      if (showFrontCam || showBottomCam) {
         visibleNames.push(squareView ? "FOV square" : "FOV");
       }
       if (showCamVector) {
@@ -765,10 +755,10 @@
       const R_drone_from_bottomCam = ry(degToRad(-90));
       const R_ned_from_bottomCam = mulMatMat(R_ned_from_drone, R_drone_from_bottomCam);
 
-      if (showFov && showFrontCam) {
+      if (showFrontCam) {
         drawCameraFov(fwdCamOrigin, R_ned_from_fwdCam, frontFovDeg, squareView ? frontFovDeg : frontFohDeg, 2.5, "x", "#c36a4d", "rgba(198, 106, 77, 0.18)");
       }
-      if (showFov && showBottomCam) {
+      if (showBottomCam) {
         drawCameraFov(bottomCamOrigin, R_ned_from_bottomCam, bottomFovDeg, squareView ? bottomFovDeg : bottomFohDeg, 2.2, "x", "#7b61b8", "rgba(123, 97, 184, 0.16)");
       }
 
@@ -839,7 +829,6 @@
     showDroneInput.addEventListener("change", () => { updateSliderVisibility(); render(); });
     showFrontCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
     showBottomCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
-    showFovInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
     showCamVectorInput.addEventListener("change", render);
     updateSliderVisibility();
     updateFohControlState();
