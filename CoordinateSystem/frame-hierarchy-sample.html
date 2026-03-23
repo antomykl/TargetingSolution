@@ -157,6 +157,10 @@
       font-size: 0.78rem;
       color: var(--muted);
     }
+
+    .ctrl-group {
+      display: contents;
+    }
   </style>
 </head>
 <body>
@@ -168,43 +172,51 @@
     </p>
 
     <div class="controls">
-      <label for="droneYaw">Drone yaw</label>
-      <input id="droneYaw" type="range" min="-180" max="180" step="1" value="24" />
-      <span id="droneYawValue" class="value">24 deg</span>
+      <div id="droneSliders" class="ctrl-group">
+        <label for="droneYaw">Drone yaw</label>
+        <input id="droneYaw" type="range" min="-180" max="180" step="1" value="24" />
+        <span id="droneYawValue" class="value">24 deg</span>
 
-      <label for="dronePitch">Drone pitch</label>
-      <input id="dronePitch" type="range" min="-40" max="40" step="1" value="-7" />
-      <span id="dronePitchValue" class="value">-7 deg</span>
+        <label for="dronePitch">Drone pitch</label>
+        <input id="dronePitch" type="range" min="-40" max="40" step="1" value="-7" />
+        <span id="dronePitchValue" class="value">-7 deg</span>
 
-      <label for="droneRoll">Drone roll</label>
-      <input id="droneRoll" type="range" min="-45" max="45" step="1" value="12" />
-      <span id="droneRollValue" class="value">12 deg</span>
+        <label for="droneRoll">Drone roll</label>
+        <input id="droneRoll" type="range" min="-45" max="45" step="1" value="12" />
+        <span id="droneRollValue" class="value">12 deg</span>
 
-      <label for="droneAltitude">Drone altitude</label>
-      <input id="droneAltitude" type="range" min="0" max="6" step="0.1" value="3.0" />
-      <span id="droneAltitudeValue" class="value">3.0 m</span>
+        <label for="droneAltitude">Drone altitude</label>
+        <input id="droneAltitude" type="range" min="0" max="6" step="0.1" value="3.0" />
+        <span id="droneAltitudeValue" class="value">3.0 m</span>
+      </div>
 
-      <label for="camTilt">Forward camera tilt</label>
-      <input id="camTilt" type="range" min="-35" max="35" step="1" value="-18" />
-      <span id="camTiltValue" class="value">-18 deg</span>
+      <div id="frontCamSliders" class="ctrl-group">
+        <label for="camTilt">Forward camera tilt</label>
+        <input id="camTilt" type="range" min="-35" max="35" step="1" value="-18" />
+        <span id="camTiltValue" class="value">-18 deg</span>
 
-      <label for="frontFov">Front cam FOV</label>
-      <input id="frontFov" type="range" min="20" max="120" step="1" value="68" />
-      <span id="frontFovValue" class="value">68 deg</span>
+        <label for="frontFov">Front cam FOV</label>
+        <input id="frontFov" type="range" min="20" max="120" step="1" value="68" />
+        <span id="frontFovValue" class="value">68 deg</span>
 
-      <label for="frontFoh">Front cam FoH</label>
-      <input id="frontFoh" type="range" min="20" max="120" step="1" value="52" />
-      <span id="frontFohValue" class="value">52 deg</span>
+        <label for="frontFoh">Front cam FoH</label>
+        <input id="frontFoh" type="range" min="20" max="120" step="1" value="52" />
+        <span id="frontFohValue" class="value">52 deg</span>
+      </div>
 
-      <label for="bottomFov">Bottom cam FOV</label>
-      <input id="bottomFov" type="range" min="20" max="140" step="1" value="92" />
-      <span id="bottomFovValue" class="value">92 deg</span>
+      <div id="bottomCamSliders" class="ctrl-group">
+        <label for="bottomFov">Bottom cam FOV</label>
+        <input id="bottomFov" type="range" min="20" max="140" step="1" value="92" />
+        <span id="bottomFovValue" class="value">92 deg</span>
 
-      <label for="bottomFoh">Bottom cam FoH</label>
-      <input id="bottomFoh" type="range" min="20" max="140" step="1" value="92" />
-      <span id="bottomFohValue" class="value">92 deg</span>
+        <label for="bottomFoh">Bottom cam FoH</label>
+        <input id="bottomFoh" type="range" min="20" max="140" step="1" value="92" />
+        <span id="bottomFohValue" class="value">92 deg</span>
+      </div>
 
-      <label><input id="squareView" type="checkbox" />Square view</label>
+      <div id="fovSettings" class="ctrl-group">
+        <label><input id="squareView" type="checkbox" />Square view</label>
+      </div>
 
       <span>Camera point vector:</span>
       <strong>[2.2, 0.6, 1.8]</strong>
@@ -265,6 +277,10 @@
     const frontFohValue = document.getElementById("frontFohValue");
     const bottomFohValue = document.getElementById("bottomFohValue");
     const squareViewInput = document.getElementById("squareView");
+    const droneSlidersGroup = document.getElementById("droneSliders");
+    const frontCamSlidersGroup = document.getElementById("frontCamSliders");
+    const bottomCamSlidersGroup = document.getElementById("bottomCamSliders");
+    const fovSettingsGroup = document.getElementById("fovSettings");
     const showNedInput = document.getElementById("showNed");
     const showDroneInput = document.getElementById("showDrone");
     const showFrontCamInput = document.getElementById("showFrontCam");
@@ -526,6 +542,13 @@
       });
     }
 
+    function updateSliderVisibility() {
+      droneSlidersGroup.style.display = showDroneInput.checked ? "contents" : "none";
+      frontCamSlidersGroup.style.display = showFrontCamInput.checked ? "contents" : "none";
+      bottomCamSlidersGroup.style.display = showBottomCamInput.checked ? "contents" : "none";
+      fovSettingsGroup.style.display = showFovInput.checked ? "contents" : "none";
+    }
+
     function updateFohControlState() {
       const linked = squareViewInput.checked;
       frontFohInput.disabled = linked;
@@ -674,11 +697,12 @@
       render();
     });
     showNedInput.addEventListener("change", render);
-    showDroneInput.addEventListener("change", render);
-    showFrontCamInput.addEventListener("change", render);
-    showBottomCamInput.addEventListener("change", render);
-    showFovInput.addEventListener("change", render);
+    showDroneInput.addEventListener("change", () => { updateSliderVisibility(); render(); });
+    showFrontCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
+    showBottomCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
+    showFovInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
     showCamVectorInput.addEventListener("change", render);
+    updateSliderVisibility();
     updateFohControlState();
     render();
   </script>
