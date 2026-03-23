@@ -239,10 +239,6 @@
       <div class="ctrl-groups">
 
         <div class="ctrl-group">
-          <div class="group-header"><label><input id="showNed" type="checkbox" checked />NED</label></div>
-        </div>
-
-        <div class="ctrl-group">
           <div class="group-header"><label><input id="showDrone" type="checkbox" checked />Drone</label></div>
           <div id="droneSliders" class="group-body">
             <div class="ctrl-row">
@@ -403,7 +399,6 @@
     const frontCamSlidersGroup = document.getElementById("frontCamSliders");
     const bottomCamSlidersGroup = document.getElementById("bottomCamSliders");
     const fovSettingsGroup = document.getElementById("fovSettings");
-    const showNedInput = document.getElementById("showNed");
     const showDroneInput = document.getElementById("showDrone");
     const showFrontCamInput = document.getElementById("showFrontCam");
     const showBottomCamInput = document.getElementById("showBottomCam");
@@ -633,9 +628,15 @@
       frameLayer.appendChild(createLine2D(o2, y2, colors.y, 2.2));
       frameLayer.appendChild(createLine2D(o2, z2, colors.z, 2.2));
 
-      labelLayer.appendChild(createText2D({ x: x2.x + 4, y: x2.y - 4 }, axisPrefix + "x", colors.x, 12));
-      labelLayer.appendChild(createText2D({ x: y2.x + 4, y: y2.y - 4 }, axisPrefix + "y", colors.y, 12));
-      labelLayer.appendChild(createText2D({ x: z2.x + 4, y: z2.y - 4 }, axisPrefix + "z", colors.z, 12));
+      if (title === "NED") {
+        labelLayer.appendChild(createText2D({ x: x2.x + 4, y: x2.y - 4 }, "North", colors.x, 12));
+        labelLayer.appendChild(createText2D({ x: y2.x + 4, y: y2.y - 4 }, "East", colors.y, 12));
+        labelLayer.appendChild(createText2D({ x: z2.x + 4, y: z2.y - 4 }, "Down", colors.z, 12));
+      } else {
+        labelLayer.appendChild(createText2D({ x: x2.x + 4, y: x2.y - 4 }, axisPrefix + "x", colors.x, 12));
+        labelLayer.appendChild(createText2D({ x: y2.x + 4, y: y2.y - 4 }, axisPrefix + "y", colors.y, 12));
+        labelLayer.appendChild(createText2D({ x: z2.x + 4, y: z2.y - 4 }, axisPrefix + "z", colors.z, 12));
+      }
     }
 
     function drawCameraFov(origin, R, fovDeg, fohDeg, range, axis, stroke, fill) {
@@ -722,7 +723,6 @@
       frontFohValue.textContent = frontFohDeg.toFixed(0) + " deg";
       bottomFohValue.textContent = bottomFohDeg.toFixed(0) + " deg";
 
-      const showNed = showNedInput.checked;
       const showDrone = showDroneInput.checked;
       const showFrontCam = showFrontCamInput.checked;
       const showBottomCam = showBottomCamInput.checked;
@@ -731,9 +731,7 @@
       const squareView = squareViewInput.checked;
 
       const visibleNames = [];
-      if (showNed) {
-        visibleNames.push("NED");
-      }
+      visibleNames.push("NED");
       if (showDrone) {
         visibleNames.push("Drone");
       }
@@ -774,9 +772,7 @@
         drawCameraFov(bottomCamOrigin, R_ned_from_bottomCam, bottomFovDeg, squareView ? bottomFovDeg : bottomFohDeg, 2.2, "x", "#7b61b8", "rgba(123, 97, 184, 0.16)");
       }
 
-      if (showNed) {
-        drawFrame([0, 0, 0], R_ned, "NED", colors.ned, 1.12, "N");
-      }
+      drawFrame([0, 0, 0], R_ned, "NED", colors.ned, 1.12, "N");
       if (showDrone) {
         drawFrame(droneOrigin, R_ned_from_drone, "Drone", colors.drone, 0.92, "D");
       }
@@ -795,7 +791,7 @@
       const bottom2d = project(bottomCamOrigin);
       const zero2d = project([0, 0, 0]);
 
-      if (showNed && showDrone) {
+      if (showDrone) {
         vectorLayer.appendChild(createLine2D(zero2d, drone2d, "#2f3d45", 2.2, true));
         labelLayer.appendChild(createText2D({ x: zero2d.x + 8, y: (zero2d.y + drone2d.y) / 2 - 6 }, "alt " + altitudeMeters.toFixed(1) + " m", "#2f3d45", 12));
       }
@@ -840,7 +836,6 @@
       updateFohControlState();
       render();
     });
-    showNedInput.addEventListener("change", render);
     showDroneInput.addEventListener("change", () => { updateSliderVisibility(); render(); });
     showFrontCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
     showBottomCamInput.addEventListener("change", () => { updateSliderVisibility(); updateFohControlState(); render(); });
