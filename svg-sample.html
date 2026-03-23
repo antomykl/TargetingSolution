@@ -281,10 +281,10 @@
           </marker>
         </defs>
 
-        <g id="gridLayer" stroke="var(--grid)" stroke-width="1"></g>
+        <g id="gridLayer" stroke="#dce4e8" stroke-width="1"></g>
         <g id="axisLayer"></g>
-        <g id="tickLayer" stroke="var(--line)" stroke-width="1.4"></g>
-        <g id="labelLayer" fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="12"></g>
+        <g id="tickLayer" stroke="#90a4ae" stroke-width="1.4"></g>
+        <g id="labelLayer" fill="#152025" font-family="IBM Plex Mono, monospace" font-size="12"></g>
         <g id="functionLayer"></g>
         <g id="pointLayer"></g>
       </svg>
@@ -334,6 +334,15 @@
       top: 28,
       bottom: 464,
       baseExtent: 10
+    };
+
+    const palette = {
+      grid: "#dce4e8",
+      line: "#90a4ae",
+      x: "#0f8d67",
+      y: "#bf5a45",
+      ink: "#152025",
+      point: "#2a66b4"
     };
 
     const samplePoints = [
@@ -464,7 +473,7 @@
       const element = document.createElementNS(SVG_NS, "text");
       element.setAttribute("x", x);
       element.setAttribute("y", y);
-      element.setAttribute("fill", color || "var(--ink)");
+      element.setAttribute("fill", color || palette.ink);
       element.textContent = value;
       return element;
     }
@@ -496,11 +505,11 @@
       const step = chooseStep(Math.max(Math.abs(view.xMin), Math.abs(view.xMax)));
       for (let x = Math.ceil(view.xMin / step) * step; x <= view.xMax; x += step) {
         const px = mapX(x, view);
-        gridLayer.appendChild(createLine(px, frame.top, px, frame.bottom, "var(--grid)", 1, false));
+        gridLayer.appendChild(createLine(px, frame.top, px, frame.bottom, palette.grid, 1, false));
       }
       for (let y = Math.ceil(view.yMin / step) * step; y <= view.yMax; y += step) {
         const py = mapY(y, view);
-        gridLayer.appendChild(createLine(frame.left, py, frame.right, py, "var(--grid)", 1, false));
+        gridLayer.appendChild(createLine(frame.left, py, frame.right, py, palette.grid, 1, false));
       }
     }
 
@@ -508,8 +517,8 @@
       clearLayer(axisLayer);
       const zeroX = mapX(0, view);
       const zeroY = mapY(0, view);
-      axisLayer.appendChild(createLine(frame.left, zeroY, frame.right, zeroY, "var(--x)", 2.7, true));
-      axisLayer.appendChild(createLine(zeroX, frame.bottom, zeroX, frame.top, "var(--y)", 2.7, true));
+      axisLayer.appendChild(createLine(frame.left, zeroY, frame.right, zeroY, palette.x, 2.7, true));
+      axisLayer.appendChild(createLine(zeroX, frame.bottom, zeroX, frame.top, palette.y, 2.7, true));
     }
 
     function drawTicksAndLabels(view) {
@@ -524,7 +533,7 @@
           continue;
         }
         const px = mapX(x, view);
-        tickLayer.appendChild(createLine(px, zeroY - 4, px, zeroY + 4, "var(--line)", 1.4, false));
+        tickLayer.appendChild(createLine(px, zeroY - 4, px, zeroY + 4, palette.line, 1.4, false));
         labelLayer.appendChild(createText(px - 9, zeroY + 18, String(Number(x.toFixed(2)))));
       }
 
@@ -533,7 +542,7 @@
           continue;
         }
         const py = mapY(y, view);
-        tickLayer.appendChild(createLine(zeroX - 4, py, zeroX + 4, py, "var(--line)", 1.4, false));
+        tickLayer.appendChild(createLine(zeroX - 4, py, zeroX + 4, py, palette.line, 1.4, false));
         labelLayer.appendChild(createText(zeroX - 34, py + 4, String(Number(y.toFixed(2)))));
       }
 
@@ -582,7 +591,7 @@
         samplePoints.map((point) => mapX(point.x, view).toFixed(2) + "," + mapY(point.y, view).toFixed(2)).join(" ")
       );
       path.setAttribute("fill", "none");
-      path.setAttribute("stroke", "var(--point)");
+      path.setAttribute("stroke", palette.point);
       path.setAttribute("stroke-width", "2");
       pointLayer.appendChild(path);
 
@@ -593,9 +602,9 @@
         circle.setAttribute("cx", px);
         circle.setAttribute("cy", py);
         circle.setAttribute("r", 4.2);
-        circle.setAttribute("fill", "var(--point)");
+        circle.setAttribute("fill", palette.point);
         pointLayer.appendChild(circle);
-        pointLayer.appendChild(createText(px + 7, py - 7, point.label, "var(--point)"));
+        pointLayer.appendChild(createText(px + 7, py - 7, point.label, palette.point));
       });
     }
 
