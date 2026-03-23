@@ -206,6 +206,22 @@
       <div class="ctrl-groups">
 
         <div class="ctrl-group">
+          <div class="group-header"><span style="font-weight:600">View</span></div>
+          <div class="group-body">
+            <div class="ctrl-row">
+              <label for="viewAzimuth">Azimuth</label>
+              <input id="viewAzimuth" type="range" min="-180" max="180" step="1" value="0" />
+              <span id="viewAzimuthValue" class="value">0 deg</span>
+            </div>
+            <div class="ctrl-row">
+              <label for="viewElevation">Elevation</label>
+              <input id="viewElevation" type="range" min="-60" max="60" step="1" value="0" />
+              <span id="viewElevationValue" class="value">0 deg</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl-group">
           <div class="group-header"><label><input id="showNed" type="checkbox" checked />NED</label></div>
         </div>
 
@@ -340,6 +356,10 @@
     const frontFohValue = document.getElementById("frontFohValue");
     const bottomFohValue = document.getElementById("bottomFohValue");
     const squareViewInput = document.getElementById("squareView");
+    const viewAzimuthInput = document.getElementById("viewAzimuth");
+    const viewElevationInput = document.getElementById("viewElevation");
+    const viewAzimuthValue = document.getElementById("viewAzimuthValue");
+    const viewElevationValue = document.getElementById("viewElevationValue");
     const droneSlidersGroup = document.getElementById("droneSliders");
     const frontCamSlidersGroup = document.getElementById("frontCamSliders");
     const bottomCamSlidersGroup = document.getElementById("bottomCamSliders");
@@ -375,6 +395,8 @@
     };
 
     const cameraPoint = [2.2, 0.6, 1.8];
+
+    let R_view = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
 
     function degToRad(deg) {
       return (deg * Math.PI) / 180;
@@ -425,9 +447,10 @@
     }
 
     function project(worldPoint) {
-      const x = worldPoint[0];
-      const y = worldPoint[1];
-      const z = worldPoint[2];
+      const rotated = mulMatVec(R_view, worldPoint);
+      const x = rotated[0];
+      const y = rotated[1];
+      const z = rotated[2];
       const u = x - 0.78 * y;
       const v = z + 0.38 * y;
       return {
@@ -635,7 +658,13 @@
       const bottomFovDeg = Number(bottomFovInput.value);
       const frontFohDeg = Number(frontFohInput.value);
       const bottomFohDeg = Number(bottomFohInput.value);
+      const viewAzimDeg = Number(viewAzimuthInput.value);
+      const viewElevDeg = Number(viewElevationInput.value);
 
+      R_view = mulMatMat(rx(degToRad(viewElevDeg)), rz(degToRad(viewAzimDeg)));
+
+      viewAzimuthValue.textContent = viewAzimDeg + " deg";
+      viewElevationValue.textContent = viewElevDeg + " deg";
       droneYawValue.textContent = yawDeg + " deg";
       dronePitchValue.textContent = pitchDeg + " deg";
       droneRollValue.textContent = rollDeg + " deg";
@@ -746,6 +775,8 @@
       labelLayer.appendChild(createText2D({ x: 26, y: 102 }, "Square view links FoH to FOV for each camera", "#4a5b65", 12));
     }
 
+    viewAzimuthInput.addEventListener("input", render);
+    viewElevationInput.addEventListener("input", render);
     droneYawInput.addEventListener("input", render);
     dronePitchInput.addEventListener("input", render);
     droneRollInput.addEventListener("input", render);
