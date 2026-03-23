@@ -517,8 +517,10 @@
       clearLayer(axisLayer);
       const zeroX = mapX(0, view);
       const zeroY = mapY(0, view);
-      axisLayer.appendChild(createLine(frame.left, zeroY, frame.right, zeroY, palette.x, 2.7, true));
-      axisLayer.appendChild(createLine(zeroX, frame.bottom, zeroX, frame.top, palette.y, 2.7, true));
+      const axisX = clamp(zeroX, frame.left, frame.right);
+      const axisY = clamp(zeroY, frame.top, frame.bottom);
+      axisLayer.appendChild(createLine(frame.left, axisY, frame.right, axisY, palette.x, 2.7, true));
+      axisLayer.appendChild(createLine(axisX, frame.bottom, axisX, frame.top, palette.y, 2.7, true));
     }
 
     function drawTicksAndLabels(view) {
@@ -527,14 +529,16 @@
       const step = chooseStep(Math.max(Math.abs(view.xMin), Math.abs(view.xMax)));
       const zeroX = mapX(0, view);
       const zeroY = mapY(0, view);
+      const axisX = clamp(zeroX, frame.left, frame.right);
+      const axisY = clamp(zeroY, frame.top, frame.bottom);
 
       for (let x = Math.ceil(view.xMin / step) * step; x <= view.xMax; x += step) {
         if (Math.abs(x) < 0.0001) {
           continue;
         }
         const px = mapX(x, view);
-        tickLayer.appendChild(createLine(px, zeroY - 4, px, zeroY + 4, palette.line, 1.4, false));
-        labelLayer.appendChild(createText(px - 9, zeroY + 18, String(Number(x.toFixed(2)))));
+        tickLayer.appendChild(createLine(px, axisY - 4, px, axisY + 4, palette.line, 1.4, false));
+        labelLayer.appendChild(createText(px - 9, axisY + 18, String(Number(x.toFixed(2)))));
       }
 
       for (let y = Math.ceil(view.yMin / step) * step; y <= view.yMax; y += step) {
@@ -542,13 +546,15 @@
           continue;
         }
         const py = mapY(y, view);
-        tickLayer.appendChild(createLine(zeroX - 4, py, zeroX + 4, py, palette.line, 1.4, false));
-        labelLayer.appendChild(createText(zeroX - 34, py + 4, String(Number(y.toFixed(2)))));
+        tickLayer.appendChild(createLine(axisX - 4, py, axisX + 4, py, palette.line, 1.4, false));
+        labelLayer.appendChild(createText(axisX - 34, py + 4, String(Number(y.toFixed(2)))));
       }
 
-      labelLayer.appendChild(createText(frame.right + 6, zeroY + 4, "X"));
-      labelLayer.appendChild(createText(zeroX - 4, frame.top - 8, "Y"));
-      labelLayer.appendChild(createText(zeroX + 8, zeroY + 16, "(0,0)"));
+      labelLayer.appendChild(createText(frame.right + 6, axisY + 4, "X"));
+      labelLayer.appendChild(createText(axisX - 4, frame.top - 8, "Y"));
+      if (zeroX >= frame.left && zeroX <= frame.right && zeroY >= frame.top && zeroY <= frame.bottom) {
+        labelLayer.appendChild(createText(zeroX + 8, zeroY + 16, "(0,0)"));
+      }
     }
 
     function drawFunctionLayers(view) {
