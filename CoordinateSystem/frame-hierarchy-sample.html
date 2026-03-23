@@ -240,6 +240,42 @@
       color: var(--muted);
     }
 
+    .vec-info {
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      background: #fbfdff;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .vec-info .vec-title {
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: var(--ink);
+    }
+
+    .vec-info .vec-row {
+      display: flex;
+      gap: 14px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+
+    .vec-info .vec-cam-label {
+      font-weight: 600;
+      min-width: 86px;
+      color: var(--muted);
+    }
+
+    .vec-info .vec-val {
+      color: #1e2e36;
+    }
+
   </style>
 </head>
 <body>
@@ -374,6 +410,21 @@
       <span id="zoomValue" class="value">100%</span>
     </div>
 
+    <div id="vecInfo" class="vec-info">
+      <span class="vec-title">Selected pixel vectors (unit direction)</span>
+      <div id="frontVecRow" class="vec-row" style="display:none">
+        <span class="vec-cam-label">Front cam:</span>
+        <span id="frontVecNed" class="vec-val"></span>
+        <span id="frontVecBody" class="vec-val"></span>
+      </div>
+      <div id="bottomVecRow" class="vec-row" style="display:none">
+        <span class="vec-cam-label">Bottom cam:</span>
+        <span id="bottomVecNed" class="vec-val"></span>
+        <span id="bottomVecBody" class="vec-val"></span>
+      </div>
+      <span id="vecInfoEmpty" class="vec-val" style="color:#8a9ba5">No active cameras</span>
+    </div>
+
     <div class="legend">
       <span class="legend-item"><span class="dot" style="background:#1f2a30"></span>NED frame origin</span>
       <span class="legend-item"><span class="dot" style="background:#7d4e21"></span>Drone frame origin</span>
@@ -431,6 +482,13 @@
     const showFrontCamInput = document.getElementById("showFrontCam");
     const showBottomCamInput = document.getElementById("showBottomCam");
     const visibleState = document.getElementById("visibleState");
+    const frontVecRow = document.getElementById("frontVecRow");
+    const bottomVecRow = document.getElementById("bottomVecRow");
+    const frontVecNed = document.getElementById("frontVecNed");
+    const frontVecBody = document.getElementById("frontVecBody");
+    const bottomVecNed = document.getElementById("bottomVecNed");
+    const bottomVecBody = document.getElementById("bottomVecBody");
+    const vecInfoEmpty = document.getElementById("vecInfoEmpty");
     const gridLayer = document.getElementById("gridLayer");
     const frameLayer = document.getElementById("frameLayer");
     const vectorLayer = document.getElementById("vectorLayer");
@@ -535,6 +593,23 @@
         width: Number(parts[0]),
         height: Number(parts[1])
       };
+    }
+
+    function transposeMatrix(m) {
+      return [
+        [m[0][0], m[1][0], m[2][0]],
+        [m[0][1], m[1][1], m[2][1]],
+        [m[0][2], m[1][2], m[2][2]]
+      ];
+    }
+
+    function normalizeVec(v) {
+      const len = Math.hypot(v[0], v[1], v[2]);
+      return len > 1e-9 ? [v[0] / len, v[1] / len, v[2] / len] : [0, 0, 0];
+    }
+
+    function fmtVec(v, labels) {
+      return labels.map((l, i) => l + ": " + (v[i] >= 0 ? "+" : "") + v[i].toFixed(3)).join("  ");
     }
 
     function updatePixelInputBounds() {
@@ -938,6 +1013,37 @@
           colors.vector,
           "v_bottom"
         );
+      }
+
+      // Update camera vector readout panel
+      {
+        const R_body = transposeMatrix(R_ned_from_drone);
+        let anyActive = false;
+        if (showFrontCam) {
+          anyActive = true;
+          const tgt = getCameraPixelTarget(fwdCamOrigin, R_ned_from_fwdCam, frontFovRange, frontFovDeg, squareView ? frontFovDeg : frontFohDeg, frontPixelX, frontPixelY, resolution.width, resolution.height);
+          const rawNed = [tgt[0] - fwdCamOrigin[0], tgt[1] - fwdCamOrigin[1], tgt[2] - fwdCamOrigin[2]];
+          const dNed = normalizeVec(rawNed);
+          const dBody = normalizeVec(mulMatVec(R_body, rawNed));
+          frontVecNed.textContent = "NED [" + fmtVec(dNed, ["N", "E", "D"]) + "]";
+          frontVecBody.textContent = "Body [" + fmtVec(dBody, ["x", "y", "z"]) + "]";
+          frontVecRow.style.display = "";
+        } else {
+          frontVecRow.style.display = "none";
+        }
+        if (showBottomCam) {
+          anyActive = true;
+          const tgt = getCameraPixelTarget(bottomCamOrigin, R_ned_from_bottomCam, bottomFovRange, bottomFovDeg, squareView ? bottomFovDeg : bottomFohDeg, bottomPixelX, bottomPixelY, resolution.width, resolution.height);
+          const rawNed = [tgt[0] - bottomCamOrigin[0], tgt[1] - bottomCamOrigin[1], tgt[2] - bottomCamOrigin[2]];
+          const dNed = normalizeVec(rawNed);
+          const dBody = normalizeVec(mulMatVec(R_body, rawNed));
+          bottomVecNed.textContent = "NED [" + fmtVec(dNed, ["N", "E", "D"]) + "]";
+          bottomVecBody.textContent = "Body [" + fmtVec(dBody, ["x", "y", "z"]) + "]";
+          bottomVecRow.style.display = "";
+        } else {
+          bottomVecRow.style.display = "none";
+        }
+        vecInfoEmpty.style.display = anyActive ? "none" : "";
       }
 
       drawFrame([0, 0, 0], R_ned, "NED", colors.ned, 1.12, "N");
