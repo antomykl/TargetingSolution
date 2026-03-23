@@ -202,11 +202,6 @@
 
     <div class="board">
       <svg id="scene" viewBox="0 0 980 620" aria-label="NED, drone, and camera coordinate systems">
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
-            <path d="M 0 0 L 8 4 L 0 8 z" fill="currentColor" />
-          </marker>
-        </defs>
         <g id="gridLayer"></g>
         <g id="frameLayer"></g>
         <g id="vectorLayer"></g>
@@ -332,6 +327,8 @@
     }
 
     function createLine2D(p1, p2, color, width, dashed) {
+      const group = document.createElementNS(SVG_NS, "g");
+
       const line = document.createElementNS(SVG_NS, "line");
       line.setAttribute("x1", p1.x.toFixed(2));
       line.setAttribute("y1", p1.y.toFixed(2));
@@ -339,11 +336,48 @@
       line.setAttribute("y2", p2.y.toFixed(2));
       line.setAttribute("stroke", color);
       line.setAttribute("stroke-width", width);
-      line.setAttribute("marker-end", "url(#arrow)");
+      line.setAttribute("stroke-linecap", "round");
       if (dashed) {
         line.setAttribute("stroke-dasharray", "6 5");
       }
-      return line;
+      group.appendChild(line);
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const length = Math.hypot(dx, dy);
+      if (length > 0.001) {
+        const angle = Math.atan2(dy, dx);
+        const headLength = Math.max(8, width * 3.4);
+        const spread = Math.PI / 7;
+
+        const hx1 = p2.x - headLength * Math.cos(angle - spread);
+        const hy1 = p2.y - headLength * Math.sin(angle - spread);
+        const hx2 = p2.x - headLength * Math.cos(angle + spread);
+        const hy2 = p2.y - headLength * Math.sin(angle + spread);
+
+        const h1 = document.createElementNS(SVG_NS, "line");
+        h1.setAttribute("x1", p2.x.toFixed(2));
+        h1.setAttribute("y1", p2.y.toFixed(2));
+        h1.setAttribute("x2", hx1.toFixed(2));
+        h1.setAttribute("y2", hy1.toFixed(2));
+        h1.setAttribute("stroke", color);
+        h1.setAttribute("stroke-width", width);
+        h1.setAttribute("stroke-linecap", "round");
+
+        const h2 = document.createElementNS(SVG_NS, "line");
+        h2.setAttribute("x1", p2.x.toFixed(2));
+        h2.setAttribute("y1", p2.y.toFixed(2));
+        h2.setAttribute("x2", hx2.toFixed(2));
+        h2.setAttribute("y2", hy2.toFixed(2));
+        h2.setAttribute("stroke", color);
+        h2.setAttribute("stroke-width", width);
+        h2.setAttribute("stroke-linecap", "round");
+
+        group.appendChild(h1);
+        group.appendChild(h2);
+      }
+
+      return group;
     }
 
     function createText2D(p, text, color, size) {
