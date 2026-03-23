@@ -204,7 +204,7 @@
       <input id="bottomFoh" type="range" min="20" max="140" step="1" value="92" />
       <span id="bottomFohValue" class="value">92 deg</span>
 
-      <label><input id="squareView" type="checkbox" checked />Square view</label>
+      <label><input id="squareView" type="checkbox" />Square view</label>
 
       <span>Camera point vector:</span>
       <strong>[2.2, 0.6, 1.8]</strong>
@@ -526,6 +526,14 @@
       });
     }
 
+    function updateFohControlState() {
+      const linked = squareViewInput.checked;
+      frontFohInput.disabled = linked;
+      bottomFohInput.disabled = linked;
+      frontFohInput.style.opacity = linked ? "0.55" : "1";
+      bottomFohInput.style.opacity = linked ? "0.55" : "1";
+    }
+
     function render() {
       clearGroup(frameLayer);
       clearGroup(vectorLayer);
@@ -594,14 +602,14 @@
       const R_drone_from_fwdCam = mulMatMat(rz(degToRad(4)), ry(degToRad(camTiltDeg)));
       const R_ned_from_fwdCam = mulMatMat(R_ned_from_drone, R_drone_from_fwdCam);
 
-      const R_drone_from_bottomCam = rx(degToRad(92));
+      const R_drone_from_bottomCam = ry(degToRad(-90));
       const R_ned_from_bottomCam = mulMatMat(R_ned_from_drone, R_drone_from_bottomCam);
 
       if (showFov && showFrontCam) {
         drawCameraFov(fwdCamOrigin, R_ned_from_fwdCam, frontFovDeg, squareView ? frontFovDeg : frontFohDeg, 2.5, "x", "#c36a4d", "rgba(198, 106, 77, 0.18)");
       }
       if (showFov && showBottomCam) {
-        drawCameraFov(bottomCamOrigin, R_ned_from_bottomCam, bottomFovDeg, squareView ? bottomFovDeg : bottomFohDeg, 2.2, "z", "#7b61b8", "rgba(123, 97, 184, 0.16)");
+        drawCameraFov(bottomCamOrigin, R_ned_from_bottomCam, bottomFovDeg, squareView ? bottomFovDeg : bottomFohDeg, 2.2, "x", "#7b61b8", "rgba(123, 97, 184, 0.16)");
       }
 
       if (showNed) {
@@ -649,6 +657,7 @@
       labelLayer.appendChild(createText2D({ x: 26, y: 48 }, "Drone attitude follows yaw-pitch-roll controls", "#4a5b65", 12));
       labelLayer.appendChild(createText2D({ x: 26, y: 66 }, "Altitude is measured above NED zero point (z = -alt)", "#4a5b65", 12));
       labelLayer.appendChild(createText2D({ x: 26, y: 84 }, "Front camera tilt is relative to drone Y-axis", "#4a5b65", 12));
+      labelLayer.appendChild(createText2D({ x: 26, y: 102 }, "Square view links FoH to FOV for each camera", "#4a5b65", 12));
     }
 
     droneYawInput.addEventListener("input", render);
@@ -660,13 +669,17 @@
     bottomFovInput.addEventListener("input", render);
     frontFohInput.addEventListener("input", render);
     bottomFohInput.addEventListener("input", render);
-    squareViewInput.addEventListener("change", render);
+    squareViewInput.addEventListener("change", () => {
+      updateFohControlState();
+      render();
+    });
     showNedInput.addEventListener("change", render);
     showDroneInput.addEventListener("change", render);
     showFrontCamInput.addEventListener("change", render);
     showBottomCamInput.addEventListener("change", render);
     showFovInput.addEventListener("change", render);
     showCamVectorInput.addEventListener("change", render);
+    updateFohControlState();
     render();
   </script>
 </body>
